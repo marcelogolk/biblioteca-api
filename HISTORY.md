@@ -42,7 +42,8 @@ Registro do desenvolvimento, decisões arquiteturais, problemas encontrados e so
 
 ## [v1.1.0] - Planejado
 
-Melhorias em funcionalidades e tratamento de erros.
+- Melhorias em funcionalidades e tratamento de erros.
+    - transformar o campo categoria do livro em um enum
 
 ---
 
