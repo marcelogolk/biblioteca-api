@@ -8,9 +8,9 @@ import java.util.Objects;
 @Table(name = "proprietarios")
 public class Proprietario extends PanacheEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long id;
+//    @Id
+//    @GeneratedValue(strategy = GenerationType.IDENTITY)
+//    private long id;
 
     @Column(unique = true, nullable = false)
     private String nome;

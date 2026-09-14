@@ -3,13 +3,12 @@ package br.dev.marcelocarvalho.controller;
 import br.dev.marcelocarvalho.dto.ProprietarioDTO;
 import br.dev.marcelocarvalho.dto.ProprietarioInclusaoDTO;
 import br.dev.marcelocarvalho.service.ProprietarioService;
-import io.quarkus.arc.log.LoggerName;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
-@Path("proprietario")
+@Path("/api/proprietarios")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class ProprietarioController {
@@ -18,7 +17,7 @@ public class ProprietarioController {
     ProprietarioService proprietarioService;
 
     @GET
-    @Path("/{id}")
+    @Path("/api/{id}")
     public ProprietarioDTO BuscarProprietarioById(@PathParam("id") Long id){
         return new ProprietarioDTO(id, "Marcelo");
     }

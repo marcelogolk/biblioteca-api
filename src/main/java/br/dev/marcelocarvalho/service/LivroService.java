@@ -19,7 +19,7 @@ public class LivroService {
     public LivroDTO incluirLivro(LivroInclusaoDTO livroInclusaoDTO){
         Livro livroEntity = new Livro();
         livroEntity.setTitulo(livroInclusaoDTO.titulo());
-        livroEntity.setAutor(livroInclusaoDTO.categoria());
+        livroEntity.setAutor(livroInclusaoDTO.autor());
         livroEntity.setCategoria(livroInclusaoDTO.categoria());
         livroEntity.setAnoDePublicacao(livroInclusaoDTO.anoDePublicacao());
         livroEntity.setProprietario(livroInclusaoDTO.proprietario());
