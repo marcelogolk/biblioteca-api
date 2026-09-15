@@ -40,6 +40,50 @@ Registro do desenvolvimento, decisões arquiteturais, problemas encontrados e so
 
 ---
 
+### 2026-09-14 - Decisão: Validação de Regras de Negócio via Bean Validation
+
+#### Contexto
+
+As regras de negócio do projeto (RN02, RN03, RN07, entre outras) exigem validações
+de campos como obrigatoriedade, tamanho e formato. Havia duas abordagens possíveis:
+
+1. Validar manualmente dentro da camada Service (ifs explícitos lançando exceções)
+2. Usar Bean Validation (JSR 380) via anotações nas entidades/DTOs (`@NotBlank`,
+   `@Size`, `@Min`, etc.), delegando a validação ao Hibernate Validator
+
+#### Decisão
+
+Optado pela abordagem com **Bean Validation**, usando a extensão
+`quarkus-hibernate-validator`.
+
+#### Justificativa
+
+- Já existia a extensão `quarkus-hibernate-orm-panache` no projeto; a
+  `quarkus-hibernate-validator` complementa naturalmente esse ecossistema
+- Validações declarativas via anotação deixam a regra de negócio visível
+  diretamente no modelo (entidade/DTO), reduzindo duplicação de código de
+  validação espalhado pelos Services
+- Integração nativa com o Quarkus REST: usando `@Valid` nos parâmetros dos
+  endpoints, a validação ocorre automaticamente antes de chegar à camada de
+  negócio, retornando `400 Bad Request` com o detalhamento dos erros
+- Reserva-se a validação manual no Service apenas para regras que dependem de
+  estado externo (ex.: verificar duplicidade no banco), que Bean Validation
+  não cobre isoladamente
+
+#### Ação
+
+Adicionada a dependência ao `pom.xml`, sem versão fixa, seguindo o padrão de
+deixar o `quarkus-bom` gerenciar a versão:
+
+```xml
+<dependency>
+    <groupId>io.quarkus</groupId>
+    <artifactId>quarkus-hibernate-validator</artifactId>
+</dependency>
+```
+
+---
+
 ## [v1.1.0] - Planejado
 
 - Melhorias em funcionalidades e tratamento de erros.
@@ -59,4 +103,4 @@ Frontend para consumir a API.
 
 ---
 
-**Última atualização:** 2026-09-12
+**Última atualização:** 2026-09-14

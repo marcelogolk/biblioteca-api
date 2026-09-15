@@ -1,6 +1,5 @@
 package br.dev.marcelocarvalho.entity;
 
-
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 
@@ -8,10 +7,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "livros")
 public class Livro extends PanacheEntity {
-
-////    @Id
-////    @GeneratedValue(strategy = GenerationType.IDENTITY)
-//    private Long id;
 
     @Column(nullable = false)
     private String titulo;
@@ -41,7 +36,7 @@ public class Livro extends PanacheEntity {
     public Livro() {
     }
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
@@ -88,7 +83,7 @@ public class Livro extends PanacheEntity {
     @Override
     public boolean equals(Object o) {
         if (!(o instanceof Livro livro)) return false;
-        return id == livro.id && anoDePublicacao == livro.anoDePublicacao && Objects.equals(titulo, livro.titulo) && Objects.equals(autor, livro.autor) && Objects.equals(categoria, livro.categoria) && Objects.equals(proprietario, livro.proprietario);
+        return Objects.equals(id, livro.id) && anoDePublicacao == livro.anoDePublicacao && Objects.equals(titulo, livro.titulo) && Objects.equals(autor, livro.autor) && Objects.equals(categoria, livro.categoria) && Objects.equals(proprietario, livro.proprietario);
     }
 
     @Override
