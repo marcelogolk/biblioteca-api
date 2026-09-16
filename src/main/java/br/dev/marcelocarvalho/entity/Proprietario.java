@@ -16,13 +16,13 @@ public class Proprietario extends PanacheEntity {
     private String nome;
 
     @NotBlank(message = "CPF é obrigatório")
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, updatable = false)
     private String cpf;
 
     public Proprietario() {
     }
 
-    public Proprietario(Long id, String nome, String cpf) {
+    public Proprietario(String nome, String cpf) {
         this.nome = nome;
         this.cpf = Objects.requireNonNull(cpf, "CPF é obrigatório");
     }
@@ -31,9 +31,7 @@ public class Proprietario extends PanacheEntity {
         return id;
     }
 
-    public String getNome() {
-        return nome;
-    }
+    public String getNome() { return nome; }
 
     public void setNome(String nome) {
         this.nome = nome;

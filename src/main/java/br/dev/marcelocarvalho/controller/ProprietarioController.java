@@ -9,6 +9,7 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 
+import javax.net.ssl.SSLEngineResult;
 import java.util.List;
 
 @Path("proprietarios")
@@ -47,9 +48,12 @@ public class ProprietarioController {
     }
 
     @PUT
-    public void atuaizarProprietario(ProprietarioDTO proprietarioDTO){
-        proprietarioService.atualizarProprietario(proprietarioDTO);
+    @Path("/{id}")
+    public Response atuaizarProprietario(@PathParam("id")Long id, @Valid ProprietarioInclusaoDTO proprietarioInclusaoDTO){
+        ProprietarioDTO proprietarioDTO = proprietarioService.atualizarProprietario(id, proprietarioInclusaoDTO);
+        return Response.ok(proprietarioDTO).build();
     }
+
 
     @DELETE
     @Path("/{id}")
