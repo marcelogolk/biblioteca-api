@@ -27,7 +27,7 @@ public class ProprietarioController {
     @GET
     @Path("/{id}")
     public ProprietarioDTO buscarProprietarioById(@PathParam("id") Long id){
-        return new ProprietarioDTO(id, "Marcelo", "62920081691");
+        return proprietarioService.buscarProprietarioById(id);
     }
 
     @POST
@@ -46,5 +46,15 @@ public class ProprietarioController {
         }
     }
 
+    @PUT
+    public void atuaizarProprietario(ProprietarioDTO proprietarioDTO){
+        proprietarioService.atualizarProprietario(proprietarioDTO);
+    }
+
+    @DELETE
+    @Path("/{id}")
+    public void excuirProprietario(@PathParam("id") Long id){
+        proprietarioService.deletarProprietarioById(id);
+    }
 
 }

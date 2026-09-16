@@ -17,6 +17,15 @@ public class ProprietarioService {
     @Inject
     ProprietarioRepository proprietarioRepository;
 
+    public ProprietarioDTO buscarProprietarioById(Long id){
+        Proprietario proprietario = proprietarioRepository.findById(id);
+        if (proprietario != null){
+            return new ProprietarioDTO(proprietario);
+        } else {
+            return null;
+        }
+    }
+
     public List<ProprietarioDTO> listAllProprietario() {
         List<ProprietarioDTO> listProprietariosDTO = new ArrayList<ProprietarioDTO>();
 
@@ -42,5 +51,21 @@ public class ProprietarioService {
         proprietarioEntity.setCpf(proprietarioInclusaoDTO.cpf());
         proprietarioRepository.persist(proprietarioEntity);
         return new ProprietarioDTO(proprietarioEntity);
+    }
+
+    @Transactional
+    public void atualizarProprietario(ProprietarioDTO proprietarioDTO) {
+        Proprietario proprietario = proprietarioRepository.findById(proprietarioDTO.id());
+
+        if (proprietario != null) {
+            proprietario.setNome(proprietarioDTO.nome());
+            proprietario.setCpf(proprietarioDTO.cpf());
+            proprietarioRepository.persist(proprietario);
+        }
+    }
+
+    @Transactional
+    public void deletarProprietarioById(Long id){
+        proprietarioRepository.deleteById(id);
     }
 }

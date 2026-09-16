@@ -83,7 +83,32 @@ deixar o `quarkus-bom` gerenciar a versão:
 ```
 
 ---
+### 2026-09-16 - Decisão: Implementação do `equals()` e `hashCode()` usando Chave de Negócio (Business Key)
 
+#### Contexto
+
+Na modelagem das entidades JPA (como `Usuario` e `Leitor`), era necessário definir a estratégia para comparação de igualdade e geração de hash (`equals()` e `hashCode()`). Havia três abordagens possíveis:
+
+1. Utilizar a Primary Key (`@Id` gerada pelo banco via `Long`)
+2. Comparar instâncias via referência de memória ou operadores relacionais (`==`)
+3. Utilizar uma Chave de Negócio (Business Key), como o CPF ou uma chave única natural imutável
+
+#### Decisão
+
+Optado pela implementação do `equals()` e `hashCode()` baseada em **Chave de Negócio (Business Key)** imutável (ex.: `cpf`).
+
+#### Justificativa
+
+- **Consistência de Estado no Ciclo de Vida do JPA:** Identificadores gerados pelo banco de dados (`@GeneratedValue`) iniciam como `null` no estado transiente (antes de persistir). Se a comparação depender do `id`, entidades não persistidas serão consideradas iguais entre si ou sofrerão alteração no valor retornado por `hashCode()` ao transitar para o estado gerenciado/persistido.
+- **Integridade em Coleções (`Set` / `Map`):** A alteração do valor de `hashCode()` após a atribuição do `id` quebra o contrato de coleções Java baseadas em hash (como `HashSet`), podendo fazer com que o objeto fique "inacessível" na coleção.
+- **Recomendação da Documentação do Hibernate:** O Hibernate recomenda expressamente o uso de chaves de negócio naturais únicos e imutáveis para `equals()` e `hashCode()`, garantindo que a igualdade em memória seja estável desde o momento em que a entidade é instanciada (`new Entidade()`).
+- **Correção na Comparação:** Evita-se o erro comum de comparar instâncias ou invocar o operador relacional `==` com objetos do tipo wrapper (`Long`), que pode falhar em casos onde o *autoboxing* ou *caching* de instâncias do Java não se aplica.
+
+#### Ação
+
+Implementado o método `equals()` comparando o campo de negócio imutável (`cpf`) via `Objects.equals()`, e o `hashCode()` derivado desse mesmo atributo[cite: 1]. Garantiu-se a restrição de imutabilidade desse campo no modelo JPA (`@Column(updatable = false, nullable = false, unique = true)`) e a remoção de *setters* para a chave de negócio, promovendo a atribuição obrigatória do valor via construtor da entidade[cite: 1].
+
+---
 ## [v1.1.0] - Planejado
 
 - Melhorias em funcionalidades e tratamento de erros.

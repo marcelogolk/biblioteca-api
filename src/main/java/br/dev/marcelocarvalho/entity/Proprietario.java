@@ -16,16 +16,15 @@ public class Proprietario extends PanacheEntity {
     private String nome;
 
     @NotBlank(message = "CPF é obrigatório")
-    @Column(unique = true)
-    public String cpf;
+    @Column(unique = true, nullable = false)
+    private String cpf;
 
     public Proprietario() {
     }
 
     public Proprietario(Long id, String nome, String cpf) {
-     //   this.id = id;
         this.nome = nome;
-        this.cpf = cpf;
+        this.cpf = Objects.requireNonNull(cpf, "CPF é obrigatório");
     }
 
     public Long getId() {
@@ -41,8 +40,6 @@ public class Proprietario extends PanacheEntity {
     }
 
     public String getCpf() { return cpf; }
-
-    public void setCpf(String cpf) { this.cpf = cpf; }
 
     @Override
     public int hashCode() {
