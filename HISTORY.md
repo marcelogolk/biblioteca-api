@@ -108,6 +108,29 @@ Optado pela implementação do `equals()` e `hashCode()` baseada em **Chave de N
 
 Implementado o método `equals()` comparando o campo de negócio imutável (`cpf`) via `Objects.equals()`, e o `hashCode()` derivado desse mesmo atributo[cite: 1]. Garantiu-se a restrição de imutabilidade desse campo no modelo JPA (`@Column(updatable = false, nullable = false, unique = true)`) e a remoção de *setters* para a chave de negócio, promovendo a atribuição obrigatória do valor via construtor da entidade[cite: 1].
 
+### 2026-09-17 - Decisão: Escopo da Validação de CPF e Adiamento da Validação de Dígitos Verificadores
+
+#### Contexto
+
+Com a introdução do `cpf` como Chave de Negócio no cadastro de `Proprietario`, fez-se necessário definir a estratégia de validação do parâmetro de entrada no `ProprietarioInclusaoDTO`. Avaliou-se dois níveis de validação:
+
+1. **Validação Formato/Sintática:** Checar apenas a obrigatoriedade (`@NotBlank`) e se a String contém exatamente 11 dígitos numéricos via Expressão Regular (`@Pattern`).
+2. **Validação Algorítmica/Semântica:** Calcular e validar matematicamente os dígitos verificadores (usando anotações como `@CPF` do Hibernate Validator ou consumindo uma API/biblioteca externa de validação).
+
+#### Decisão
+
+Optado por manter a **Validação Sintática por formato (`@Pattern(regexp = "\\d{11}")`) na Fase 1 (MVP)**, postergando a validação algorítmica/matemática do dígito verificador para a **Fase 2**.
+
+#### Justificativa
+
+- **Foco no MVP (Fase 1):** A validação por regex atende integralmente ao formato aceito pelo modelo relacional e previne erros de parse ou payloads malformados na API.
+- **Evolução Incremental para a Fase 2:** Pretende-se avaliar na Fase 2 se a validação algorítmica será feita via dependência do Bean Validation (`@CPF`) ou via integração com uma API de consulta/validação externa. Mover essa decisão para a próxima iteração evita complexidade desnecessária no MVP.
+
+#### Ação
+
+- Atualizado o arquivo `REGRAS_NEGOCIO.md` com renumeração das regras inserindo as regras `RN05`, `RN06` e `RN07`.
+- Registrada a tarefa de integração de validação de dígito verificador/API externa de CPF no roadmap da **Fase 2** no arquivo `FASES.md`.
+
 ---
 ## [v1.1.0] - Planejado
 

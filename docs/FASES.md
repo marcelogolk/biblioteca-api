@@ -10,21 +10,22 @@ O projeto será desenvolvido de forma incremental, com releases versionadas. Cad
 
 **Status:** Em desenvolvimento
 
-**Objetivo:** Implementar o CRUD básico com arquitetura em camadas.
+**Objetivo:** Implementar o CRUD básico com arquitetura em camadas e regras essenciais de negócio.
 
 ### Funcionalidades
 
 - [x] Estrutura do projeto Quarkus
-- [ ] Entidade `Proprietario` (Id, Nome)
+- [x] Entidade `Proprietario` (Id, Nome, CPF como Chave de Negócio)
 - [ ] Entidade `Livro` (Id, Título, Autor, Categoria, Ano, Proprietário)
-- [ ] Repository com Panache para ambas as entidades
-- [ ] Service com lógica de negócio
-- [ ] Controller REST com endpoints:
+- [x] Repository com Panache para entidades
+- [x] Service com lógica de negócio (incluindo recreação de registro para alteração de Business Key)
+- [x] Controller REST para Proprietário com endpoints:
     - `POST /api/proprietarios` — Criar proprietário
     - `GET /api/proprietarios` — Listar todos
     - `GET /api/proprietarios/{id}` — Buscar por ID
     - `PUT /api/proprietarios/{id}` — Atualizar
     - `DELETE /api/proprietarios/{id}` — Deletar
+- [ ] Controller REST para Livros:
     - `POST /api/livros` — Criar livro
     - `GET /api/livros` — Listar todos
     - `GET /api/livros/{id}` — Buscar por ID
@@ -32,8 +33,8 @@ O projeto será desenvolvido de forma incremental, com releases versionadas. Cad
     - `GET /api/livros/proprietario/{proprietarioId}` — Buscar por proprietário
     - `PUT /api/livros/{id}` — Atualizar
     - `DELETE /api/livros/{id}` — Deletar
-- [ ] Validações de negócio
-- [ ] Tratamento de erros (400, 404, 500)
+- [x] Validações de formato básicas via Bean Validation (`@NotBlank`, `@Size`, `@Pattern`)
+- [x] Tratamento de erros de negócio e concorrência (400, 404, 409, 500)
 - [ ] Testes unitários (70% cobertura)
 - [ ] Documentação Swagger UI
 - [ ] Deploy em VPS Oracle Cloud
@@ -55,11 +56,13 @@ controller/ → service/ → repository/ → banco de dados
 
 **Status:** Planejado
 
-**Objetivo:** Refinar funcionalidades e adicionar recursos de produção.
+**Objetivo:** Refinar funcionalidades, elevar o rigor das validações e adicionar recursos de produção.
 
 ### Funcionalidades Previstas
 
+- [ ] Integrar validação algorítmica de CPF (Verificação de Dígitos Verificadores via anotação `@CPF` ou integração com API externa de validação)
 - [ ] Paginação nas listagens
+- [ ] Transformar o campo categoria do livro em um Enum
 - [ ] Melhor tratamento de exceções customizadas
 - [ ] Testes de integração
 - [ ] Flyway para versionamento do banco
@@ -79,7 +82,7 @@ controller/ → service/ → repository/ → banco de dados
 - [ ] Autenticação com JWT
 - [ ] Autorização por roles
 - [ ] Cache estratégico
-- [ ] Otimizações de query (índices, lazy loading)
+- [ ] Otimizaciones de query (índices, lazy loading)
 - [ ] Monitoramento e métricas
 
 ---

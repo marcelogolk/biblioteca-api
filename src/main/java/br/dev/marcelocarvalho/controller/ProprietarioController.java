@@ -51,7 +51,10 @@ public class ProprietarioController {
     @Path("/{id}")
     public Response atuaizarProprietario(@PathParam("id")Long id, @Valid ProprietarioInclusaoDTO proprietarioInclusaoDTO){
         ProprietarioDTO proprietarioDTO = proprietarioService.atualizarProprietario(id, proprietarioInclusaoDTO);
-        return Response.ok(proprietarioDTO).build();
+        return Response
+                .status(Response.Status.OK)
+                .entity(proprietarioDTO)
+                .build();
     }
 
 

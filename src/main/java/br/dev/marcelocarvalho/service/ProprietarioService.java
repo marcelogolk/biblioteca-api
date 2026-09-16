@@ -22,24 +22,24 @@ public class ProprietarioService {
         if (proprietario != null){
             return new ProprietarioDTO(proprietario);
         } else {
-            return null;
+            throw new WebApplicationException("Não encontrado proprietário com o id:"+ id, 404);
         }
     }
 
     public List<ProprietarioDTO> listAllProprietario() {
-        List<ProprietarioDTO> listProprietariosDTO = new ArrayList<ProprietarioDTO>();
-
-        List<Proprietario> listProprietariosEntity = proprietarioRepository.listAll();
-        for(Proprietario proprietarioEntity : listProprietariosEntity) {
-            listProprietariosDTO.add(new ProprietarioDTO(proprietarioEntity));
-        }
-        return listProprietariosDTO;
+        return proprietarioRepository.listAll()
+                .stream()
+                .map(ProprietarioDTO::new)
+                .toList();
     }
 
     @Transactional
     public ProprietarioDTO incluirProprietario(ProprietarioInclusaoDTO proprietarioInclusaoDTO){
         if (isNomeJaExiste(proprietarioInclusaoDTO)) {
-            throw new WebApplicationException("Já existe um proprietário com esse nome", 400);
+            throw new WebApplicationException("Já existe um proprietário com esse nome", 409);
+        }
+        if (isCPFJaExiste(proprietarioInclusaoDTO)){
+            throw new WebApplicationException("Já existe um proprietário com o novo CPF informado", 409);
         }
         Proprietario proprietarioEntity = new Proprietario(proprietarioInclusaoDTO.nome(),proprietarioInclusaoDTO.cpf());
         proprietarioRepository.persist(proprietarioEntity);
@@ -73,7 +73,9 @@ public class ProprietarioService {
 
     @Transactional
     public void deletarProprietarioById(Long id){
-        proprietarioRepository.deleteById(id);
+        if (!proprietarioRepository.deleteById(id)){
+            throw new WebApplicationException("Proprietário não encontrado", 404);
+        }
     }
 
 
