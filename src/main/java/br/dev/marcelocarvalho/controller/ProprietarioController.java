@@ -1,5 +1,6 @@
 package br.dev.marcelocarvalho.controller;
 
+import br.dev.marcelocarvalho.dto.ProprietarioAtualizacaoDTO;
 import br.dev.marcelocarvalho.dto.ProprietarioDTO;
 import br.dev.marcelocarvalho.dto.ProprietarioInclusaoDTO;
 import br.dev.marcelocarvalho.service.ProprietarioService;
@@ -8,8 +9,6 @@ import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-
-import javax.net.ssl.SSLEngineResult;
 import java.util.List;
 
 @Path("proprietarios")
@@ -21,36 +20,35 @@ public class ProprietarioController {
     ProprietarioService proprietarioService;
 
     @GET
-    public List<ProprietarioDTO> listAllProprietarios(){
-        return proprietarioService.listAllProprietario();
+    public Response listAllProprietarios(){
+        List<ProprietarioDTO> proprietarios = proprietarioService.listAllProprietario();
+        return Response
+                .status(Response.Status.OK)
+                .entity(proprietarios)
+                .build();
     }
 
     @GET
     @Path("/{id}")
-    public ProprietarioDTO buscarProprietarioById(@PathParam("id") Long id){
-        return proprietarioService.buscarProprietarioById(id);
+    public Response buscarProprietarioById(@PathParam("id") Long id){
+        return Response
+                .status(Response.Status.OK)
+                .entity(proprietarioService.buscarProprietarioById(id))
+                .build();
     }
 
     @POST
     public Response incluirProprietario(@Valid ProprietarioInclusaoDTO proprietarioInclusaoDTO){
-        try {
-            ProprietarioDTO proprietarioDTO = proprietarioService.incluirProprietario(proprietarioInclusaoDTO);
-            return Response
-                    .status(Response.Status.CREATED)
-                    .entity(proprietarioDTO)
-                    .build();
-        } catch (Exception e){
-            return Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity("Erro ao Incluir Proprietario" + e.getMessage())
-                    .build();
-        }
+        return Response
+                .status(Response.Status.CREATED)
+                .entity(proprietarioService.incluirProprietario(proprietarioInclusaoDTO))
+                .build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response atuaizarProprietario(@PathParam("id")Long id, @Valid ProprietarioInclusaoDTO proprietarioInclusaoDTO){
-        ProprietarioDTO proprietarioDTO = proprietarioService.atualizarProprietario(id, proprietarioInclusaoDTO);
+    public Response atualizarProprietario(@PathParam("id")Long id, @Valid ProprietarioAtualizacaoDTO proprietarioAtualizacaoDTO){
+        ProprietarioDTO proprietarioDTO = proprietarioService.atualizarProprietario(id, proprietarioAtualizacaoDTO);
         return Response
                 .status(Response.Status.OK)
                 .entity(proprietarioDTO)
@@ -60,8 +58,10 @@ public class ProprietarioController {
 
     @DELETE
     @Path("/{id}")
-    public void excuirProprietario(@PathParam("id") Long id){
+    public Response excluirProprietario(@PathParam("id") Long id) {
         proprietarioService.deletarProprietarioById(id);
+        return Response
+                .status(Response.Status.NO_CONTENT)
+                .build();
     }
-
 }

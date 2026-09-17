@@ -12,7 +12,7 @@ public class Proprietario extends PanacheEntity {
 
     @NotBlank(message = "Nome é obrigatório")
     @Size(min = 3, message = "Nome deve ter no mínimo 3 caracteres")
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String nome;
 
     @NotBlank(message = "CPF é obrigatório")
