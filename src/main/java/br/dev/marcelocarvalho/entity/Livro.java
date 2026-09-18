@@ -2,30 +2,50 @@ package br.dev.marcelocarvalho.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 
+import java.time.Year;
 import java.util.Objects;
+import java.util.UUID;
+
 @Entity
 @Table(name = "livros")
 public class Livro extends PanacheEntity {
 
+    @Column(nullable = false, unique = true, updatable = false, length = 36)
+    private String uuid;
+
+    @NotBlank(message = "Título é obrigatório")
+    @Size(min = 3, message = "Título deve ter no mínimo 3 caracteres")
     @Column(nullable = false)
     private String titulo;
 
+    @NotBlank(message = "Autor é obrigatório")
     @Column(nullable = false)
     private String autor;
 
+    @NotBlank(message = "Categoria é obrigatória")
     @Column(nullable = false)
     private String categoria;
 
+    @PastOrPresent(message = "O Ano de publicação não pode ser futuro")
     @Column(nullable = false)
-    private int anoDePublicacao;
+    private Year anoDePublicacao;
 
+    @NotNull(message = "Proprietário é obrigatório")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "proprietario_id", nullable = false)
     private Proprietario proprietario;
 
-    public Livro(Long id, String titulo, String autor, String categoria, int anoDePublicacao, Proprietario proprietario) {
-        this.id = id;
+    public Livro() {
+        this.uuid = UUID.randomUUID().toString();
+    }
+
+    public Livro(String titulo, String autor, String categoria, Year anoDePublicacao, Proprietario proprietario) {
+        this.uuid = UUID.randomUUID().toString();
         this.titulo = titulo;
         this.autor = autor;
         this.categoria = categoria;
@@ -33,7 +53,8 @@ public class Livro extends PanacheEntity {
         this.proprietario = proprietario;
     }
 
-    public Livro() {
+    public String getUuid() {
+        return uuid;
     }
 
     public Long getId() {
@@ -64,11 +85,11 @@ public class Livro extends PanacheEntity {
         this.categoria = categoria;
     }
 
-    public int getAnoDePublicacao() {
+    public Year getAnoDePublicacao() {
         return anoDePublicacao;
     }
 
-    public void setAnoDePublicacao(int anoDePublicacao) {
+    public void setAnoDePublicacao(Year anoDePublicacao) {
         this.anoDePublicacao = anoDePublicacao;
     }
 
@@ -80,26 +101,27 @@ public class Livro extends PanacheEntity {
         this.proprietario = proprietario;
     }
 
-    @Override
-    public boolean equals(Object o) {
+   public boolean equals(Object o) {
+       if (this == o) return true;
         if (!(o instanceof Livro livro)) return false;
-        return Objects.equals(id, livro.id) && anoDePublicacao == livro.anoDePublicacao && Objects.equals(titulo, livro.titulo) && Objects.equals(autor, livro.autor) && Objects.equals(categoria, livro.categoria) && Objects.equals(proprietario, livro.proprietario);
-    }
+        return Objects.equals(uuid, livro.getUuid());
+   }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, titulo, autor, categoria, anoDePublicacao, proprietario);
+        return Objects.hash(uuid);
     }
 
     @Override
     public String toString() {
         return "Livro{" +
                 "id=" + id +
+                ", uuid='" + uuid + '\'' +
                 ", titulo='" + titulo + '\'' +
                 ", autor='" + autor + '\'' +
                 ", categoria='" + categoria + '\'' +
                 ", anoDePublicacao=" + anoDePublicacao +
-                ", proprietario=" + proprietario +
+                ", proprietarioId=" + (proprietario != null ? proprietario.id : null) +
                 '}';
     }
 }

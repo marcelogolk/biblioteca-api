@@ -18,6 +18,13 @@ public class ProprietarioService {
     @Inject
     ProprietarioRepository proprietarioRepository;
 
+    public List<ProprietarioDTO> listAllProprietario() {
+        return proprietarioRepository.listAll()
+                .stream()
+                .map(ProprietarioDTO::new)
+                .toList();
+    }
+
     public ProprietarioDTO buscarProprietarioById(Long id){
         Proprietario proprietario = proprietarioRepository.findById(id);
         if (proprietario != null){
@@ -29,13 +36,6 @@ public class ProprietarioService {
                     .build()
             );
         }
-    }
-
-    public List<ProprietarioDTO> listAllProprietario() {
-        return proprietarioRepository.listAll()
-                .stream()
-                .map(ProprietarioDTO::new)
-                .toList();
     }
 
     @Transactional

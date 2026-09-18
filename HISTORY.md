@@ -206,7 +206,123 @@ essa entidade tiver registros associados.
   CPF errado, quando esse proprietário já possui livros associados, ainda depende
   da resolução da RN04 (bloqueio de exclusão de proprietário com livros) — em
   aberto até a implementação do CRUD de `Livro`.
+
 ---
+
+### 2026-09-18 - Implementação do CRUD de `Livro`: causa raiz, correções e regras de negócio (RN08-RN18)
+
+#### Contexto
+
+Ao revisar o CRUD de `Livro`, foi identificado um problema estrutural na raiz de
+várias inconsistências percebidas nos testes, além de bugs pontuais e a
+necessidade de mapear as validações de RN08 a RN18.
+
+#### 🔴 Causa raiz: `Proprietario` como campo do DTO de entrada
+
+O `LivroInclusaoDTO` original carregava um campo `Proprietario proprietario`
+(a entidade JPA inteira), em vez de só o identificador. Isso causava o
+seguinte fluxo problemático:
+
+1. Cliente envia `{"proprietario": {"id": 5}}`
+2. O Jackson instancia um objeto `Proprietario` só a partir do JSON — nunca
+   gerenciado pela sessão do Hibernate
+3. Ao persistir o `Livro` com essa referência, o Hibernate lança
+   `TransientPropertyValueException` (instância "unsaved transient" no
+   relacionamento `@ManyToOne`)
+4. O `if (proprietario == null)` do código antigo só verificava ausência do
+   campo, não a existência real do proprietário no banco — não cumprindo a
+   RN11 de fato
+
+**Correção:** os DTOs de entrada (`LivroInclusaoDTO`, `LivroAtualizacaoDTO`)
+passaram a carregar apenas `Long proprietarioId`. O Service busca a entidade
+real via `proprietarioRepository.findByIdOptional(id).orElseThrow(...)`,
+retornando `404` se não existir, e só então monta/atualiza o `Livro` com uma
+entidade de fato gerenciada pelo Hibernate.
+
+#### Bugs concretos corrigidos
+
+- **Checagem morta em `atualizarLivro`:** existia um `if (... == null)`
+  comparando o retorno de um método que na verdade sempre lança exceção
+  (nunca retorna `null`) — código inalcançável, escondendo o real caminho de
+  erro. Substituído por `findByIdOptional(...).orElseThrow(...)`.
+- **`atualizarLivro` sem checagem de livro inexistente:** o método buscava o
+  `Livro` por `id` sem checar `null` antes de usá-lo, causando
+  `NullPointerException` (500) em vez de `404` para um id inexistente.
+  Corrigido buscando com `findByIdOptional(id).orElseThrow(...)` **antes**
+  de buscar o proprietário, garantindo que o erro de "livro não encontrado"
+  nunca seja mascarado por outro erro.
+- **Controller retornando o DTO errado:** `atualizarLivro` no Controller
+  devolvia `livroAtualizacaoDTO` (dado bruto enviado pelo cliente, sem
+  `id`/`uuid`) em vez de `livroDTO` (resultado real, vindo do banco).
+  Corrigido para devolver o DTO de saída correto.
+- **Cosmético:** vírgula/espaço faltando no `toString()` de `Livro` e
+  `Proprietario`.
+
+#### Decisão: `equals`/`hashCode` via business key, não via `id`
+
+Seguindo a recomendação do Hibernate para entidades JPA, `equals()` e
+`hashCode()` de `Livro` e `Proprietario` passaram a se basear em uma
+**business key** (`uuid` em `Livro`, `cpf` em `Proprietario`) em vez do
+`id` gerado pelo banco. Motivos:
+
+- O `id` é `null` até o `persist()`; se a entidade entrar em um `HashSet`
+  antes de ser salva, seu hash muda depois — quebrando o contrato do `Set`
+- A business key existe desde a criação do objeto e nunca muda, mantendo o
+  hash estável durante todo o ciclo de vida da entidade
+- A comparação usa `o instanceof Livro livro` em vez de
+  `getClass() != o.getClass()`, para funcionar corretamente também quando
+  `o` é um proxy do Hibernate (lazy loading), já que o proxy é uma subclasse
+  em tempo de execução — `instanceof` reconhece essa herança nativamente
+
+#### Decisão: tipo `Year` para `anoDePublicacao` + `AttributeConverter`
+
+O campo `anoDePublicacao` foi definido como `java.time.Year` (em vez de
+`int`), para permitir a validação `@PastOrPresent` nativamente (Bean
+Validation não suporta essa anotação sobre tipos primitivos). Como nem JPA
+nem Hibernate mapeiam `Year` para coluna automaticamente, foi criada
+`YearAttributeConverter` (`@Converter(autoApply = true)`, pacote
+`entity.converter`), convertendo `Year ↔ Integer` na coluna do banco.
+
+#### Decisão: DTOs separados por operação (padrão já usado em `Proprietario`)
+
+- `LivroDTO`: saída (dados já persistidos, sem validação — dado que sai do
+  banco já é confiável)
+- `LivroInclusaoDTO`: entrada na criação, com todas as validações de
+  RN08, RN09/RN11 (parcial), RN10, RN12, RN13, RN14
+- `LivroAtualizacaoDTO`: entrada na atualização, com as mesmas validações
+  de `LivroInclusaoDTO` (RN16), **exceto `proprietarioId`**
+
+#### Regras de negócio mapeadas (RN08-RN18)
+
+| Regra | Onde é resolvida |
+|---|---|
+| RN08 (título obrigatório) | `@NotBlank` em `titulo` (Entity + DTOs de entrada) |
+| RN09 (proprietário obrigatório) | `@NotNull` em `proprietarioId` (DTOs de entrada) |
+| RN10 (título mín. 3 caracteres) | `@Size(min = 3)` em `titulo` |
+| RN11 (proprietário deve existir) | Service: `findByIdOptional(...).orElseThrow(404)` — não é validável via anotação, pois depende do estado do banco |
+| RN12 (categoria obrigatória) | `@NotBlank` em `categoria` |
+| RN13 (ano não pode ser futuro) | `@PastOrPresent` em `anoDePublicacao` (tipo `Year`) |
+| RN14 (autor obrigatório) | `@NotBlank` em `autor` |
+| RN15 (proprietário imutável na atualização) | `proprietarioId` **removido** de `LivroAtualizacaoDTO`; Service nunca busca nem seta proprietário em `atualizarLivro` |
+| RN16 (mesmas validações no update) | `LivroAtualizacaoDTO` espelha as anotações de `LivroInclusaoDTO` |
+| RN17 (exclusão sem restrição) | `deletarLivroById` sem condição além de existência do registro |
+| RN18 (exclusão não afeta proprietário) | Garantido pela direção do relacionamento (`Livro` é o lado dono da FK); atenção para nunca configurar `cascade = REMOVE`/`orphanRemoval` no sentido `Proprietario → Livro` |
+
+#### Aprendizados
+
+- DTO de entrada nunca deve carregar uma entidade JPA inteira como campo —
+  só o identificador, com a entidade real buscada no Service
+- Regras que dependem do estado atual do banco (unicidade, existência de
+  relacionamento) não são resolvidas por Bean Validation isolado; exigem
+  checagem explícita no Service
+- `equals`/`hashCode` de entidade JPA merece atenção redobrada: usar
+  business key, e comparar com `instanceof` (ou `Hibernate.getClass`) para
+  lidar corretamente com proxies de lazy loading
+- Ao restringir uma operação (RN15), a forma mais simples e segura é não
+  expor o campo no DTO, em vez de expô-lo e validar sua imutabilidade depois
+
+---
+
 ## [v1.1.0] - Planejado
 
 - Melhorias em funcionalidades e tratamento de erros.

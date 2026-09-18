@@ -46,8 +46,9 @@ public class Proprietario extends PanacheEntity {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (!(o instanceof Proprietario proprietario)) return false;
-        return Objects.equals(cpf, proprietario.cpf);
+        return Objects.equals(cpf, proprietario.getCpf());
     }
 
     @Override
@@ -55,6 +56,7 @@ public class Proprietario extends PanacheEntity {
         return "Proprietario{" +
                 "id=" + id +
                 ", nome='" + nome + '\'' +
+                ", cpf='" + cpf + '\'' +
                 '}';
     }
 }

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Year;
 
-public record LivroInclusaoDTO(
+public record LivroAtualizacaoDTO(
         @NotBlank(message = "Título é obrigatório")
         @Size(min = 3, message = "Título deve ter no mínimo 3 caracteres")
         String titulo,
@@ -19,8 +19,5 @@ public record LivroInclusaoDTO(
         String categoria,
 
         @PastOrPresent(message = "O Ano de publicação não pode ser futuro")
-        Year anoDePublicacao,
-
-        @NotNull(message = "Proprietario é obrigatório")
-        Long proprietarioId) {
+        Year anoDePublicacao){
 }
