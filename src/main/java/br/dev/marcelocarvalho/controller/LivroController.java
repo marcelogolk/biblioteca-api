@@ -1,6 +1,8 @@
 package br.dev.marcelocarvalho.controller;
 
-import br.dev.marcelocarvalho.dto.*;
+import br.dev.marcelocarvalho.dto.LivroAtualizacaoDTO;
+import br.dev.marcelocarvalho.dto.LivroDTO;
+import br.dev.marcelocarvalho.dto.LivroInclusaoDTO;
 import br.dev.marcelocarvalho.service.LivroService;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -49,7 +51,7 @@ public class LivroController {
         LivroDTO livroDTO = livroService.atualizarLivro(id, livroAtualizacaoDTO);
         return Response
                 .status(Response.Status.OK)
-                .entity(livroAtualizacaoDTO)
+                .entity(livroDTO)
                 .build();
     }
 
