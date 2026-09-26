@@ -1,0 +1,11 @@
+#!/bin/bash
+set -e
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+    CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD '${APP_DB_PASSWORD}';
+    CREATE DATABASE ${POSTGRES_DB} OWNER ${APP_DB_USER};
+EOSQL
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};
+EOSQL

@@ -13,6 +13,7 @@ Organizar e gerenciar livros de uma biblioteca familiar, permitindo cadastro de 
 - [Regras de Negócio](docs/REGRAS_NEGOCIO.md)
 - [Como Rodar Localmente](docs/COMO_RODAR.md)
 - [Arquitetura](docs/ARQUITETURA.md)
+- [Deploy da Biblioteca API — Oracle Cloud VPS](docs/DEPLOY_VPS_BIBLIOTECA_API.md)
 - [Histórico de Desenvolvimento](HISTORY.md)
 
 ## 🚀 Quick Start

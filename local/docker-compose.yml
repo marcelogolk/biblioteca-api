@@ -1,26 +1,28 @@
 services:
-    postgres:
-      image: postgres:16.4
-      container_name: biblioteca_api_postgres
-      restart: unless-stopped
-      environment:
-        POSTGRES_DB: biblioteca_api
-        POSTGRES_USER: bibliotecario.admin
-        POSTGRES_PASSWORD: marcrisanna
-      ports:
-        - "5432:5432"
-      volumes:
-        - ./init:/docker-entrypoint-initdb.d:ro
-        - biblioteca_api_data:/var/lib/postgresql/data
-      healthcheck:
-        test: [ "CMD-SHELL", "pg_isready -U bibliotecario.admin -d biblioteca_api" ]
-        interval: 10s
-        timeout: 5s
-        retries: 5
-        start_period: 30s
+  postgres:
+    image: postgres:16.4
+    container_name: biblioteca_api_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d:ro
+      - biblioteca_api_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
 volumes:
-    biblioteca_api_data:
+  biblioteca_api_data:
 
   # ------------------------------------------------------------
   # Como usar:
@@ -30,9 +32,20 @@ volumes:
   #   ./mvnw quarkus:dev
   #
   # application.properties (Quarkus):
-  #   quarkus.datasource.db-kind=postgresql
-  #   quarkus.datasource.username=bibliotecario.admin
-  #   quarkus.datasource.password=marcrisanna
-  #   quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/biblioteca_api
-  #   quarkus.hibernate-orm.database.generation=none
-  # ------------------------------------------------------------
+  #  ---------- Comum a todos os ambientes ----------
+  #  quarkus.datasource.db-kind=postgresql
+  #  quarkus.datasource.username=${APP_DB_USER}
+  #  quarkus.datasource.password=${APP_DB_PASSWORD}
+  #  quarkus.hibernate-orm.log.sql=true
+  #
+  #  # Prefixo global da API REST
+  #  quarkus.rest.path=/api
+  #
+  #  #---------- Perfil dev (ambiente local) ----------
+  #  %dev.quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/biblioteca_api
+  #  %dev.quarkus.hibernate-orm.database.generation=update
+  #
+  #  # ---------- Perfil prod (VPS) ----------
+  #  %prod.quarkus.datasource.jdbc.url=jdbc:postgresql://postgres:5432/biblioteca_api
+  #  %prod.quarkus.hibernate-orm.database.generation=update
+  #------------------------------------------------------------
