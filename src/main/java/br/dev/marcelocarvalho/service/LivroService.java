@@ -43,6 +43,27 @@ public class LivroService {
         }
     }
 
+   //Buscar por categoria
+    public List<LivroDTO> buscarLivroByCategoria(String categoria){
+
+        return livroRepository.listAll()
+                .stream()
+                .filter(livro -> livro.getCategoria().equalsIgnoreCase(categoria))
+                .map(LivroDTO::new)
+                .toList();
+    }
+
+    //Buscar por proprietarioID
+    public List<LivroDTO> buscarLivroByProprietarioId(Long proprietarioId){
+
+        return livroRepository.listAll()
+                .stream()
+                .filter(livro -> (livro.getProprietario().getId() == proprietarioId))
+                .map(LivroDTO::new)
+                .toList();
+    }
+
+
     @Transactional
     public LivroDTO incluirLivro(@Valid LivroInclusaoDTO livroInclusaoDTO){
         Proprietario proprietario = proprietarioRepository
@@ -107,6 +128,13 @@ public class LivroService {
     private boolean isUuidJaExiste(String uuid) {
         return livroRepository
                 .find("uuid", uuid)
+                .firstResultOptional()
+                .isPresent();
+    }
+
+    private boolean isCategoriaExiste(String categoria) {
+        return livroRepository
+                .find("categoria",categoria)
                 .firstResultOptional()
                 .isPresent();
     }

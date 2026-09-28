@@ -37,6 +37,26 @@ public class LivroController {
                 .build();
     }
 
+    //GET /api/livros/categoria/{categoria} — Buscar por categoria
+    @GET
+    @Path("/categoria/{categoria}")
+    public Response buscarLivroByCategoria(@PathParam("categoria") String  categoria){
+        return Response
+                .status(Response.Status.OK)
+                .entity(livroService.buscarLivroByCategoria(categoria))
+                .build();
+    }
+
+    //GET /api/livros/proprietario/{proprietarioId} — Buscar por proprietário
+    @GET
+    @Path("/proprietario/{proprietariId}")
+    public Response buscarLivroByCategoria(@PathParam("proprietariId") Long  proprietariId){
+        return Response
+                .status(Response.Status.OK)
+                .entity(livroService.buscarLivroByProprietarioId(proprietariId))
+                .build();
+    }
+
     @POST
     public Response incluirLivro(@Valid LivroInclusaoDTO livroInclusaoDTO){
         return Response

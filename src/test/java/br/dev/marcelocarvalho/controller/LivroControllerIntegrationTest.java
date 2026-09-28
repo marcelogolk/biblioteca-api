@@ -9,7 +9,7 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
-class LivroControllerIT {
+class LivroControllerIntegrationTest {
 
     private Long proprietarioId;
     private Long livroId;

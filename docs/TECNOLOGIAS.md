@@ -5,7 +5,7 @@
 | Tecnologia | Versão | Propósito |
 |-----------|--------|----------|
 | **Quarkus** | Latest | Framework Java supersônico |
-| **Java** | 25 | Linguagem de programação |
+| **Java** | 21 | Linguagem de programação |
 | **Hibernate ORM + Panache** | Latest | Persistência de dados e ORM |
 | **PostgreSQL** | 12+ | Banco de dados relacional |
 | **Maven** | 3.8+ | Gerenciador de dependências e build |
