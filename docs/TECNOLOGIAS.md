@@ -21,7 +21,7 @@
 | **IntelliJ IDEA Community** | IDE de desenvolvimento |
 | **Git** | Controle de versão |
 | **GitHub** | Repositório remoto |
-| **Docker** | Containerização (futuro) |
+| **Docker** | Containerização do banco de dados (PostgreSQL), tanto em ambiente local quanto na VPS de produção |
 | **Linux** | Sistema operacional da VPS |
 
 ## Dependências do Projeto

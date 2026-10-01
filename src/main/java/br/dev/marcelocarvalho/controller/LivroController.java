@@ -37,7 +37,6 @@ public class LivroController {
                 .build();
     }
 
-    //GET /api/livros/categoria/{categoria} — Buscar por categoria
     @GET
     @Path("/categoria/{categoria}")
     public Response buscarLivroByCategoria(@PathParam("categoria") String  categoria){
@@ -47,10 +46,9 @@ public class LivroController {
                 .build();
     }
 
-    //GET /api/livros/proprietario/{proprietarioId} — Buscar por proprietário
     @GET
     @Path("/proprietario/{proprietariId}")
-    public Response buscarLivroByCategoria(@PathParam("proprietariId") Long  proprietariId){
+    public Response buscarLivroByProprietarioId(@PathParam("proprietariId") Long  proprietariId){
         return Response
                 .status(Response.Status.OK)
                 .entity(livroService.buscarLivroByProprietarioId(proprietariId))

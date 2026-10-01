@@ -409,9 +409,10 @@ Confirmar: role `biblioteca_app` existe sem atributos de superusuário; banco `b
 1. **Camada 6:** escrever o Dockerfile da API Quarkus (modo JVM), integrar ao `docker-compose.yml` da VPS (sem expor porta do Postgres, comunicação via nome do serviço `postgres`), replicar a estrutura `.env`/`init/` para a pasta `vps/`.
 2. **Camada 7:** configurar reverse proxy (Nginx), HTTPS via Let's Encrypt usando o domínio `marcelocarvalho.dev.br` (registro DNS tipo A apontando para o IP público da VPS).
 3. Revisar `hibernate-orm.database.generation` em produção ao introduzir Flyway (Fase 2).
-4. Implementar regra de exclusão de proprietário com livros associados (409 em vez de 500 cru) — pendência já registrada no documento original do projeto.
-5. Endpoints de busca de livro por categoria/proprietário — pendência já registrada no documento original do projeto.
-6. Testes automatizados (meta de 70% de cobertura) — pendência já registrada no documento original do projeto.
 
+> Pendências de regras de negócio e cobertura de testes (exclusão de proprietário
+> com livros associados, testes automatizados) são acompanhadas em `HISTORY.md`
+> e `FASES.md`, para evitar duplicidade de registro entre este documento e os
+> demais.
 
 [Voltar ao README](../README.md)

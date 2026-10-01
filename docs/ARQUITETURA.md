@@ -7,17 +7,96 @@ A aplicação segue uma arquitetura em camadas bem definida, separando responsab
 ---
 
 ## Diagrama de Arquitetura
-┌─────────────────────────────────────────────────────────┐ │ Cliente REST │ │ (Postman, Frontend, etc) │ └────────────────────┬────────────────────────────────────┘ │ ▼ ┌─────────────────────────────────────────────────────────┐ │ CONTROLLER LAYER │ │ (ProprietarioController, LivroController) │ │ - Recebe requisições HTTP │ │ - Valida entrada (DTOs) │ │ - Retorna respostas HTTP │ └────────────────────┬────────────────────────────────────┘ │ ▼ ┌─────────────────────────────────────────────────────────┐ │ SERVICE LAYER │ │ (ProprietarioService, LivroService) │ │ - Lógica de negócio │ │ - Validações de regras │ │ - Orquestração de operações │ └────────────────────┬────────────────────────────────────┘ │ ▼ ┌─────────────────────────────────────────────────────────┐ │ REPOSITORY LAYER │ │ (ProprietarioRepository, LivroRepository) │ │ - Acesso a dados │ │ - Queries customizadas │ │ - Operações CRUD │ └────────────────────┬────────────────────────────────────┘ │ ▼ ┌─────────────────────────────────────────────────────────┐ │ ENTITY LAYER │ │ (Proprietario, Livro) │ │ - Mapeamento JPA │ │ - Relacionamentos │ └────────────────────┬────────────────────────────────────┘ │ ▼ ┌─────────────────────────────────────────────────────────┐ │ DATABASE LAYER │ │ (PostgreSQL) │ └─────────────────────────────────────────────────────────┘
-
+```
+┌──────────────────────────────────────────────────────────┐
+│                  Cliente REST                            │
+│              (Postman, Frontend, etc)                    │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+                     ▼
+┌───────────────────────────────────────────────────────────┐
+│                   CONTROLLER LAYER                        │
+│         (ProprietarioController, LivroController)         │
+│  - Recebe requisições HTTP                                │
+│  - Valida entrada (DTOs)                                  │
+│  - Retorna respostas HTTP                                 │
+└────────────────────┬──────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────┐
+│                    SERVICE LAYER                           │
+│            (ProprietarioService, LivroService)             │
+│  - Lógica de negócio                                       │
+│  - Validações de regras                                    │
+│  - Orquestração de operações                               │
+└────────────────────┬───────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────┐
+│                  REPOSITORY LAYER                          │
+│       (ProprietarioRepository, LivroRepository)            │
+│  - Acesso a dados                                          │
+│  - Queries customizadas (filtros delegados ao banco)       │
+│  - Operações CRUD                                          │
+└────────────────────┬───────────────────────────────────────┘
+                     │     
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ENTITY LAYER                             │
+│                (Proprietario, Livro)                        │
+│  - Mapeamento JPA                                           │
+│  - Relacionamentos                                          │
+└────────────────────┬────────────────────────────────────────┘
+                     │
+                     ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   DATABASE LAYER                            │
+│                    (PostgreSQL)                             │
+└─────────────────────────────────────────────────────────────┘
+```
 ---
 
 ## Estrutura de Pastas
-src/main/java/br/dev/marcelocarvalho/ ├── controller/ │ ├── ProprietarioController.java │ └── LivroController.java ├── service/ │ ├── ProprietarioService.java │ └── LivroService.java ├── repository/ │ ├── ProprietarioRepository.java │ └── LivroRepository.java ├── entity/ │ ├── Proprietario.java │ └── Livro.java └── dto/ ├── ProprietarioDTO.java └── LivroDTO.java
+```
+src/main/java/br/dev/marcelocarvalho/
+├── controller/
+│   ├── ProprietarioController.java
+│   └── LivroController.java
+├── service/
+│   ├── ProprietarioService.java
+│   └── LivroService.java
+├── repository/
+│   ├── ProprietarioRepository.java
+│   └── LivroRepository.java
+├── entity/
+│   ├── Proprietario.java
+│   ├── Livro.java
+│   └── converter/
+│       └── YearAttributeConverter.java
+└── dto/
+    ├── ProprietarioDTO.java
+    ├── ProprietarioInclusaoDTO.java
+    ├── ProprietarioAtualizacaoDTO.java
+    ├── LivroDTO.java
+    ├── LivroInclusaoDTO.java
+    └── LivroAtualizacaoDTO.java
 
-src/main/resources/ ├── application.properties └── import.sql (dados iniciais)
+src/main/resources/
+├── application.properties
+└── import.sql (dados iniciais)
 
-src/test/java/br/dev/marcelocarvalho/ ├── service/ │ ├── ProprietarioServiceTest.java │ └── LivroServiceTest.java └── controller/ ├── ProprietarioControllerTest.java └── LivroControllerTest.java
-
+src/test/java/br/dev/marcelocarvalho/
+├── entity/
+│   ├── ProprietarioTest.java
+│   ├── LivroTest.java
+│   └── converter/
+│       └── YearAttributeConverterTest.java
+├── service/
+│   └── LivroServiceTest.java        (estrutura criada, implementação pendente)
+└── controller/
+    ├── ProprietarioControllerTest.java  (estrutura criada, implementação pendente)
+    └── LivroControllerTest.java
+```
 ---
 
 ## Responsabilidades por Camada
@@ -40,9 +119,10 @@ src/test/java/br/dev/marcelocarvalho/ ├── service/ │ ├── Proprieta
 ### Repository
 
 - Implementar operações CRUD
-- Executar queries customizadas
+- Executar queries customizadas (incluindo filtros por categoria e por proprietário, resolvidos diretamente no banco)
 - Gerenciar transações
 - Retornar entidades
+
 
 ### Entity
 
@@ -52,22 +132,55 @@ src/test/java/br/dev/marcelocarvalho/ ├── service/ │ ├── Proprieta
 
 ### DTO
 
-- Transferir dados entre camadas
+- Transferir dados entre camadas 
 - Desacoplar API interna de externa
 - Validar entrada/saída
+- Separar contratos de entrada por operação (inclusão vs. atualização), restringindo estruturalmente quais campos cada operação aceita
+
 
 ---
 
 ## Fluxo de uma Requisição
-Cliente envia POST /api/livros com JSON ↓
-Controller recebe e converte para LivroDTO ↓
-Controller chama LivroService.criar(livroDTO) ↓
-Service valida regras de negócio ↓
-Service chama LivroRepository.persist(livro) ↓
-Repository persiste no PostgreSQL ↓
-Service retorna livro criado ↓
-Controller retorna HTTP 201 com JSON do livro ↓
+```
+Cliente envia POST /api/livros com JSON
+        ↓
+Controller recebe e converte para LivroInclusaoDTO
+        ↓
+Controller chama LivroService.incluirLivro(dto)
+        ↓
+Service valida regras de negócio
+        ↓
+Service busca o Proprietario existente via ProprietarioRepository
+        ↓
+Service chama LivroRepository.persist(livro)
+        ↓
+Repository persiste no PostgreSQL
+        ↓
+Service retorna LivroDTO criado
+        ↓
+Controller retorna HTTP 201 com JSON do livro
+        ↓
 Cliente recebe resposta
+```
+## Fluxo de uma Requisição
+```
+Cliente envia GET /api/livros/proprietario/{proprietarioId}
+        ↓
+Controller recebe o parâmetro de rota
+        ↓
+Controller chama LivroService.buscarLivroByProprietarioId(id)
+        ↓
+Service chama LivroRepository.findByProprietarioId(id)
+        ↓
+Repository executa a consulta filtrada diretamente no banco
+        ↓
+Service converte os resultados em List<LivroDTO>
+        ↓
+Controller retorna HTTP 200 com a lista (vazia ou não)
+        ↓
+Cliente recebe resposta
+```
+ - O mesmo padrão se aplica à busca por categoria (GET /api/livros/categoria/{categoria}).
 ---
 
 ## Padrões Utilizados
@@ -75,8 +188,9 @@ Cliente recebe resposta
 - **Layered Architecture** — Separação de responsabilidades
 - **Repository Pattern** — Abstração de acesso a dados
 - **Service Layer** — Lógica de negócio centralizada
-- **DTO Pattern** — Transferência de dados
+- **DTO Pattern** — Transferência de dados, com contratos de entrada separados por operação
 - **Dependency Injection** — Quarkus CDI
+- **Business Key** — Identidade de entidade JPA baseada em chave de negócio imutável (cpf em Proprietario, uuid em Livro), em vez do identificador técnico gerado pelo banco
 
 ---
 

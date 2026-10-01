@@ -16,31 +16,45 @@ O projeto será desenvolvido de forma incremental, com releases versionadas. Cad
 
 - [x] Estrutura do projeto Quarkus
 - [x] Entidade `Proprietario` (Id, Nome, CPF como Chave de Negócio)
-- [ ] Entidade `Livro` (Id, Título, Autor, Categoria, Ano, Proprietário)
+- [x] Entidade `Livro` (Id, Título, Autor, Categoria, Ano, Proprietário)
 - [x] Repository com Panache para entidades
-- [x] Service com lógica de negócio (incluindo recreação de registro para alteração de Business Key)
+- [x] Service com lógica de negócio (CPF imutável após cadastro, sem alteração via atualização)
 - [x] Controller REST para Proprietário com endpoints:
-    - `POST /api/proprietarios` — Criar proprietário
-    - `GET /api/proprietarios` — Listar todos
-    - `GET /api/proprietarios/{id}` — Buscar por ID
-    - `PUT /api/proprietarios/{id}` — Atualizar
-    - `DELETE /api/proprietarios/{id}` — Deletar
-- [ ] Controller REST para Livros:
-    - `POST /api/livros` — Criar livro
-    - `GET /api/livros` — Listar todos
-    - `GET /api/livros/{id}` — Buscar por ID
-    - `GET /api/livros/categoria/{categoria}` — Buscar por categoria
-    - `GET /api/livros/proprietario/{proprietarioId}` — Buscar por proprietário
-    - `PUT /api/livros/{id}` — Atualizar
-    - `DELETE /api/livros/{id}` — Deletar
+  - `POST /api/proprietarios` — Criar proprietário
+  - `GET /api/proprietarios` — Listar todos
+  - `GET /api/proprietarios/{id}` — Buscar por ID
+  - `PUT /api/proprietarios/{id}` — Atualizar
+  - `DELETE /api/proprietarios/{id}` — Deletar
+- [x] Controller REST para Livros:
+  - `POST /api/livros` — Criar livro
+  - `GET /api/livros` — Listar todos
+  - `GET /api/livros/{id}` — Buscar por ID
+  - `GET /api/livros/categoria/{categoria}` — Buscar por categoria
+  - `GET /api/livros/proprietario/{proprietarioId}` — Buscar por proprietário
+  - `PUT /api/livros/{id}` — Atualizar
+  - `DELETE /api/livros/{id}` — Deletar
 - [x] Validações de formato básicas via Bean Validation (`@NotBlank`, `@Size`, `@Pattern`)
 - [x] Tratamento de erros de negócio e concorrência (400, 404, 409, 500)
-- [ ] Testes unitários (70% cobertura)
-- [ ] Documentação Swagger UI
-- [ ] Deploy em VPS Oracle Cloud
+- [~] Testes unitários (70% cobertura) — em andamento:
+  - [x] Testes de entidade (`ProprietarioTest`, `LivroTest`, `YearAttributeConverterTest`)
+  - [x] Testes de integração do `LivroController` (`LivroControllerTest`, incluindo inclusão, atualização e exclusão)
+  - [ ] Testes de integração do `ProprietarioController` (estrutura criada, implementação pendente)
+  - [ ] Testes unitários do `LivroService` com mocks (estrutura criada, implementação pendente)
+  - [ ] Teste do cenário "lista vazia" em `listAllLivros` (depende de decisão sobre isolamento do banco de testes)
+- [x] Documentação Swagger UI
+- [x] Containerização do banco de dados (Postgres via Docker Compose, local e produção)
+- [ ] Deploy em VPS Oracle Cloud (camadas 0 a 5 concluídas; containerização da API e exposição à internet pendentes)
 
 ### Arquitetura
 controller/ → service/ → repository/ → banco de dados
+
+### Pendências conhecidas da Fase 1
+
+- Revisar uso de path param versus query param na busca de livro por categoria (segmento de rota vazio retorna `404` em vez de alcançar o método).
+- Implementar regra de bloqueio de exclusão de proprietário com livros associados (RN07), evitando erro `500` cru.
+- Corrigir possível erro de digitação em `application.properties`
+  (`%prod.quarkus.hernate-orm.database.generation`).
+- Isolar o banco de dados usado pelos testes automatizados do banco usado manualmente em desenvolvimento.
 
 ### Entregáveis
 
@@ -60,12 +74,13 @@ controller/ → service/ → repository/ → banco de dados
 
 ### Funcionalidades Previstas
 
-- [ ] Integrar validação algorítmica de CPF (Verificação de Dígitos Verificadores via anotação `@CPF` ou integração com API externa de validação)
+- [ ] Integrar validação algorítmica de CPF (verificação de dígitos verificadores via anotação `@CPF` ou integração com API externa de validação)
 - [ ] Paginação nas listagens
 - [ ] Transformar o campo categoria do livro em um Enum
 - [ ] Melhor tratamento de exceções customizadas
-- [ ] Testes de integração
-- [ ] Flyway para versionamento do banco
+- [ ] Testes de integração adicionais
+- [ ] Flyway para versionamento do banco (incluindo separação de usuário de migração e usuário de runtime no Postgres)
+- [ ] Revisar `quarkus.hibernate-orm.database.generation` em produção (trocar `update` por `validate`, com migrations explícitas via Flyway)
 - [ ] Melhor estrutura de logs
 - [ ] DTOs mais robustos
 
@@ -82,7 +97,7 @@ controller/ → service/ → repository/ → banco de dados
 - [ ] Autenticação com JWT
 - [ ] Autorização por roles
 - [ ] Cache estratégico
-- [ ] Otimizaciones de query (índices, lazy loading)
+- [ ] Otimizações de query (índices, lazy loading)
 - [ ] Monitoramento e métricas
 
 ---
@@ -98,7 +113,7 @@ controller/ → service/ → repository/ → banco de dados
 - [ ] Frontend em React ou Vue.js
 - [ ] Integração com API
 - [ ] Interface responsiva
-- [ ] Deploy junto com backend
+- [ ] Deploy junto com backend (reverse proxy Nginx servindo também os arquivos estáticos)
 
 ---
 

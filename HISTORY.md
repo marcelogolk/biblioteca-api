@@ -322,6 +322,207 @@ nem Hibernate mapeiam `Year` para coluna automaticamente, foi criada
   expor o campo no DTO, em vez de expô-lo e validar sua imutabilidade depois
 
 ---
+### 2026-09-30 - Correção: Comparação de identificadores e revisão de configuração
+
+#### Contexto
+
+Durante revisão dos endpoints de busca de `Livro`, foi identificado um trecho
+comparando identificadores do tipo `Long` usando o operador `==` em vez de
+`.equals()`. Esse tipo de comparação é instável para objetos wrapper, podendo
+falhar silenciosamente dependendo do valor (fora da faixa de cache de
+`Long` em Java, `==` compara referência de objeto, não valor).
+
+Também foi identificado um possível erro de digitação em
+`application.properties`, na chave
+`%prod.quarkus.hernate-orm.database.generation=update` (ausência da letra "i"
+em "hibernate").
+
+#### Decisão
+
+A comparação de `Long` via `==` foi corrigida para `.equals()`. O typo em
+`application.properties` foi registrado como pendência de correção.
+
+#### Justificativa
+
+- `.equals()` garante comparação por valor, independente de cache de
+  `Integer`/`Long` do Java, evitando bugs sutis e intermitentes.
+- Uma chave de configuração mal escrita falha silenciosamente: o Quarkus
+  simplesmente ignora a propriedade não reconhecida, em vez de lançar erro,
+  então o problema só seria percebido por comportamento inesperado em runtime.
+
+#### Ação
+
+- Corrigida a comparação de `id` em `Livro` para usar `.equals()`.
+- **Pendência registrada:** revisar e corrigir o nome da propriedade em
+  `application.properties`.
+
+---
+
+### 2026-09-30 - Decisão: Busca de `Livro` por categoria e por proprietário filtrada no banco
+
+#### Contexto
+
+Os endpoints de busca de `Livro` por categoria e por proprietário estavam
+implementados buscando todos os registros via `listAll()` e filtrando o
+resultado em memória (via stream). Essa abordagem não escala bem à medida que
+a tabela cresce, pois traz todos os registros do banco para a aplicação antes
+de descartar os que não interessam.
+
+#### Decisão
+
+Ambas as buscas passaram a delegar o filtro diretamente ao banco de dados,
+via Panache, em vez de filtrar em memória.
+
+#### Justificativa
+
+- Filtrar no banco evita trafegar e carregar na memória da aplicação
+  registros que serão descartados logo em seguida — importante à medida que
+  o volume de dados cresce.
+- O problema de suportar muitas requisições simultâneas é um tema distinto
+  (concorrência/escalabilidade de infraestrutura), não resolvido por esta
+  mudança, e fica como estudo futuro.
+
+#### Ação
+
+- Criado o método `findByProprietarioId` em `LivroRepository`, usando a API
+  do Panache (`list("proprietario.id", proprietarioId)`).
+- `LivroService.buscarLivroByProprietarioId` passou a chamar o Repository e
+  converter o resultado via `.stream().map(LivroDTO::new).toList()`.
+- Busca por categoria migrada de forma equivalente, filtrando via consulta
+  no Repository em vez de `listAll()` com filtro em memória.
+- Removido o método morto `isCategoriaExiste`, remanescente de uma
+  abordagem de busca por categoria descartada.
+- Confirmado, via log de SQL gerado pelo Hibernate (cláusula
+  `where l1_0.proprietario_id=?`), que o filtro de fato ocorre no banco.
+- Decisão de **não impedir** o cadastro de livros repetidos, por enquanto.
+- **Pendência registrada:** revisitar o uso de path param
+  (`/categoria/{categoria}`) versus query param na busca por categoria — um
+  segmento de rota vazio resulta em `404` em vez de alcançar o método, o que
+  pode não ser o comportamento desejado.
+
+---
+
+### 2026-09-30 - Decisão: Consolidação dos testes de integração de `LivroController`
+
+#### Contexto
+
+Existiam duas classes de teste de integração para `LivroController`:
+`LivroControllerIntegrationTest` (cobrindo atualização, com ciclo
+`@BeforeEach`/`@AfterEach`) e `LivroControllerIncluirLivroIntegrationTest`
+(cobrindo inclusão, com ciclo `@BeforeAll`/`@AfterAll` e nove cenários via
+`@ParameterizedTest`, compartilhando um único proprietário entre todos os
+cenários). A divergência de ciclo de vida entre as duas gerava inconsistência
+de abordagem e dificultava a manutenção.
+
+Era desejável consolidar as duas em uma única classe, usando um único padrão
+de isolamento. Avaliou-se dois modelos: reaproveitar estado entre cenários
+(mais rápido, já em uso na classe de inclusão) versus recriar o estado
+(proprietário) a cada teste individual (mais lento, porém com isolamento
+mais simples e previsível).
+
+#### Decisão
+
+Consolidação das duas classes em uma única, `LivroControllerTest`, adotando
+o modelo de **estado fresco por teste** — um novo proprietário criado via
+`@BeforeEach` e removido via `@AfterEach` a cada execução, priorizando
+isolamento e simplicidade sobre velocidade de execução da suíte.
+
+#### Justificativa
+
+- Isolamento por teste elimina dependência de ordem de execução e de estado
+  deixado por testes anteriores, reduzindo risco de testes "frágeis"
+  (flaky tests).
+- A simplicidade de um único padrão de ciclo de vida facilita a leitura e
+  manutenção futura da suíte.
+
+#### Decisão técnica: `@MethodSource` dos cenários parametrizados
+
+Ao tentar dar aos nove cenários de inclusão acesso ao `proprietarioId`
+criado no `@BeforeEach` de cada execução, investigou-se se bastaria tornar o
+método de `@MethodSource` não-estático (via
+`@TestInstance(Lifecycle.PER_CLASS)`). Constatou-se que esse método é sempre
+resolvido **uma única vez**, antes de qualquer `@BeforeEach`, independente do
+ciclo de vida da classe (`PER_METHOD` ou `PER_CLASS`) — portanto, ele nunca
+teria acesso a um `proprietarioId` gerado "por teste".
+
+**Solução adotada:** o `@MethodSource` permanece `static`; cada cenário usa
+um texto-marcador (`__PROPRIETARIO_ID__`) no lugar do id no corpo JSON. Esse
+marcador é substituído pelo `proprietarioId` real, via `String.replace(...)`,
+dentro do próprio método de teste — que já roda depois do `@BeforeEach` da
+execução correspondente.
+
+#### Ação
+
+- Criada `LivroControllerTest`, substituindo `LivroControllerIntegrationTest`
+  e `LivroControllerIncluirLivroIntegrationTest`.
+- `@BeforeEach` cria um proprietário por execução, com CPF gerado via
+  `System.nanoTime()` (em vez de `System.currentTimeMillis()`), reduzindo o
+  risco de colisão de CPF decorrente do `@BeforeEach` agora rodar várias
+  vezes seguidas na mesma suíte (uma vez por teste, incluindo cada um dos
+  nove cenários parametrizados).
+- `@AfterEach` remove o proprietário e todos os livros criados durante o
+  teste, rastreados numa lista de instância (`livrosCriados`).
+- Adicionados testes para o endpoint `DELETE /api/livros/{id}`, cobrindo os
+  dois caminhos possíveis: exclusão bem-sucedida (`204`, com confirmação
+  adicional via `GET` subsequente retornando `404`) e id inexistente
+  (`404`).
+- Analisado o endpoint `GET /api/livros` (`listAllLivros`): por não receber
+  nenhum parâmetro, não existem caminhos de erro possíveis — apenas
+  variações de estado dos dados (zero, um ou vários livros). Implementação
+  do teste de "lista vazia" ficou pendente (ver próxima entrada).
+
+#### Aprendizados
+
+- `@MethodSource` é resolvido uma única vez, antes de qualquer
+  `@BeforeEach`/`@Test` — independente do ciclo de vida da classe. Dados que
+  dependem de setup por teste não podem ser obtidos diretamente dentro dele;
+  é necessário um mecanismo de substituição posterior (placeholder) dentro
+  do próprio método de teste.
+
+---
+
+### 2026-09-30 - Decisão: Adiamento do isolamento do banco de dados usado nos testes
+
+#### Contexto
+
+Ao planejar o teste do cenário "lista vazia" para `GET /api/livros`,
+constatou-se que o banco de dados usado pela suíte de testes automatizados é
+o mesmo banco usado manualmente durante o desenvolvimento (via Swagger e
+DBeaver). Isso inviabiliza testar com segurança uma afirmação de estado
+absoluto da tabela (como "a lista está vazia"), pois o resultado depende de
+dados inseridos manualmente fora do controle do teste — e uma tentativa de
+limpar a tabela antes do teste arriscaria apagar dados de desenvolvimento
+sem intenção.
+
+#### Decisão
+
+Por ora, mantido o banco de desenvolvimento compartilhado também para os
+testes automatizados. A migração para um banco de testes isolado (via
+Quarkus Dev Services/Testcontainers, ou configuração de datasource
+dedicada) fica adiada para um momento futuro.
+
+#### Justificativa
+
+- A maioria dos testes já escritos não é afetada por esse compartilhamento,
+  pois seguem o padrão de criar seus próprios dados (via `@BeforeEach`) e
+  verificar apenas recursos específicos criados por eles mesmos — nunca o
+  estado absoluto da tabela inteira.
+- Apenas o cenário de "lista vazia" exige estado absoluto do banco, sendo o
+  único caso realmente bloqueado por este compartilhamento no momento.
+- Migrar o datasource de teste é uma mudança de configuração do projeto, não
+  do código das classes de teste — podendo ser feita depois sem exigir
+  reescrever os testes já existentes.
+
+#### Ação
+
+- **Pendência registrada:** investigar isolamento do banco de testes via
+  Quarkus Dev Services/Testcontainers.
+- **Pendência registrada:** implementar teste de "lista vazia" para
+  `GET /api/livros`, condicionado à resolução do isolamento de banco, ou,
+  como alternativa imediata, usando verificação relativa de contagem
+  (quantidade antes/depois, em vez de valor absoluto).
+
+---
 
 ## [v1.1.0] - Planejado
 
