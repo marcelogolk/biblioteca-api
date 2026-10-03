@@ -43,7 +43,6 @@ public class LivroService {
         }
     }
 
-   //Buscar por categoria
     public List<LivroDTO> buscarLivroByCategoria(String categoria){
         return livroRepository.findByCategoria(categoria)
                 .stream()
@@ -51,7 +50,6 @@ public class LivroService {
                 .toList();
     }
 
-    //Buscar por proprietarioID
     public List<LivroDTO> buscarLivroByProprietarioId(Long proprietarioId){
         return livroRepository.findByProprietarioId(proprietarioId)
                 .stream()

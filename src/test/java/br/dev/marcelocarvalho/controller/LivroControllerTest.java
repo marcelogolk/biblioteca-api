@@ -15,8 +15,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import static io.restassured.RestAssured.given;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 
 @QuarkusTest
 class LivroControllerTest {
@@ -51,10 +50,33 @@ class LivroControllerTest {
         given().when().delete("/api/proprietarios/{id}", proprietarioId);
     }
 
-    // ---------- Atualização ----------
+    @Test
+    void buscarLivroById_deveRetornarLivro_quandoIdExistente() {
+        Long livroId = criarLivro("Dom Casmurro", "Machado de Assis", "Romance", 1899, proprietarioId);
+
+        given()
+                .when()
+                .get("/api/livros/{id}", livroId)
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(livroId.intValue()))
+                .body("titulo", equalTo("Dom Casmurro"))
+                .body("autor", equalTo("Machado de Assis"));
+    }
 
     @Test
-    void testAtualizarLivro_deveRetornarLivroAtualizadoComIdEUuid() {
+    void buscarLivroById_deveRetornar404_quandoIdInexistente() {
+        Long idInexistente = 999_999_999_999_999L;
+
+        given()
+                .when()
+                .get("/api/livros/{id}", idInexistente)
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void atualizarLivro_deveRetornarLivroAtualizadoComIdEUuid() {
         Long livroId = criarLivro("Titulo Original", "Autor Original", "Categoria", 2020, proprietarioId);
 
         given()
@@ -71,7 +93,20 @@ class LivroControllerTest {
                 .body("titulo", equalTo("Titulo Atualizado"));
     }
 
-    // ---------- Inclusão ----------
+    @Test
+    void atualizarLivro_deveRetornar404_quandoIdInexistente() {
+        Long idInexistente = 999_999_999_999_999L;
+
+        given()
+                .contentType(ContentType.JSON)
+                .body("""
+                    {"titulo": "Titulo Qualquer", "autor": "Autor Qualquer", "categoria": "Categoria", "anoDePublicacao": 2020}
+                    """)
+                .when()
+                .put("/api/livros/{id}", idInexistente)
+                .then()
+                .statusCode(404);
+    }
 
     static Stream<Arguments> cenariosIncluirLivro() {
         int anoAtual = Year.now().getValue();
@@ -195,6 +230,7 @@ class LivroControllerTest {
                 .then()
                 .statusCode(404);
     }
+
     @Test
     void listAllLivros_deveIncluirLivrosRecemCriados() {
         int quantidadeAntes = given()
@@ -215,6 +251,73 @@ class LivroControllerTest {
                 .body("size()", equalTo(quantidadeAntes + 2));
     }
 
+    @Test
+    void buscarLivroByCategoria_deveRetornarLivros_quandoCategoriaExistente() {
+        criarLivro("Livro Categoria A", "Autor X", "Ficcao", 2020, proprietarioId);
+        criarLivro("Outro Livro Categoria A", "Autor Y", "Ficcao", 2021, proprietarioId);
+
+        given()
+                .when()
+                .get("/api/livros/categoria/{categoria}", "Ficcao")
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(2))
+                .body("categoria", everyItem(equalTo("Ficcao")));
+    }
+
+    @Test
+    void buscarLivroByCategoria_deveRetornarListaVazia_quandoCategoriaSemLivros() {
+        given()
+                .when()
+                .get("/api/livros/categoria/{categoria}", "CategoriaInexistenteXYZ123")
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(0));
+    }
+
+    @Test
+    void buscarLivroByCategoria_deveRetornar404_quandoCategoriaVaziaNaUrl() {
+        given()
+                .when()
+                .get("/api/livros/categoria/")
+                .then()
+                .statusCode(404);
+    }
+
+    @Test
+    void buscarLivroByProprietarioId_deveRetornarLivros_quandoProprietarioComLivros() {
+        criarLivro("Livro do Proprietario", "Autor X", "Categoria", 2020, proprietarioId);
+        criarLivro("Outro Livro do Proprietario", "Autor Y", "Categoria", 2021, proprietarioId);
+
+        given()
+                .when()
+                .get("/api/livros/proprietario/{proprietarioId}", proprietarioId)
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(2));
+    }
+
+    @Test
+    void buscarLivroByProprietarioId_deveRetornarListaVazia_quandoProprietarioSemLivros() {
+        given()
+                .when()
+                .get("/api/livros/proprietario/{proprietarioId}", proprietarioId)
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(0));
+    }
+
+    @Test
+    void buscarLivroByProprietarioId_deveRetornarListaVazia_quandoProprietarioInexistente() {
+        Long idInexistente = 999_999_999_999_999L;
+
+        given()
+                .when()
+                .get("/api/livros/proprietario/{proprietarioId}", idInexistente)
+                .then()
+                .statusCode(200)
+                .body("size()", equalTo(0));
+    }
 
     private Long criarLivro(String titulo, String autor, String categoria, int ano, Long proprietarioId) {
         Long livroId = given()

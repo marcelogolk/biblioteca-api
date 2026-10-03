@@ -523,6 +523,61 @@ dedicada) fica adiada para um momento futuro.
   (quantidade antes/depois, em vez de valor absoluto).
 
 ---
+### 2026-10-03 - Implementação de ProprietarioControllerTest
+
+### Contexto
+
+ProprietarioControllerTest existia apenas como esqueleto (imports, setUp/
+tearDown vazios e métodos vazios para os cinco endpoints), sem @QuarkusTest
+nem uso de RestAssured. Era necessário construir a suíte de testes de
+integração do ProprietarioController, seguindo o mesmo padrão já consolidado
+em LivroControllerTest.Decisão
+
+Adotada a mesma estrutura de isolamento por teste já usada em
+LivroControllerTest: @AfterEach removendo os proprietários criados durante
+cada execução, rastreados em uma lista de instância (proprietariosCriados), e
+um helper criarProprietario(nome) responsável por gerar um CPF único via
+System.nanoTime() a cada chamada.O helper foi projetado para retornar não apenas o id do proprietário criado,
+mas também o cpf gerado, através de um record local
+(ProprietarioCriado(Long id, String cpf)), permitindo que os testes validem
+o campo cpf sem precisar recalculá-lo ou supor seu valor.Justificativa
+
+
+Reaproveitar o mesmo padrão de isolamento de LivroControllerTest mantém
+consistência entre as suítes e reduz a curva de aprendizado para manutenção
+futura.
+Expor o cpf gerado via record evita duplicar a lógica de geração de CPF
+dentro de cada teste e permite asserções completas (id, nome e cpf) nos
+cenários que criam um proprietário via helper.
+
+### Ação
+
+Implementados os testes para os cinco endpoints do ProprietarioController:
+listAllProprietarios: teste relativo de contagem (quantidade antes/depois
+da criação de novos proprietários), no mesmo espírito do teste pendente para
+GET /api/livros, evitando depender do estado absoluto da tabela.
+buscarProprietarioById: cenários de id existente (validando id, nome e
+cpf do retorno) e id inexistente (404).
+incluirProprietario: sete cenários via @ParameterizedTest/@MethodSource
+(caminho feliz, nome ausente, nome com 2 caracteres, nome com exatamente 3
+caracteres, CPF ausente, CPF com menos de 11 dígitos, CPF com máscara),
+usando um placeholder (__CPF__) substituído por um CPF único gerado no
+próprio método de teste — mesma técnica de placeholder já usada em
+LivroControllerTest para proprietarioId. Adicionado também um teste
+isolado para CPF duplicado (409), por depender de um proprietário
+previamente existente e não se encaixar no @MethodSource dos demais
+cenários.
+atualizarProprietario: caminho feliz, id inexistente (404) e três
+cenários de validação do campo nome via @MethodSource (ausente, 2
+caracteres, exatamente 3 caracteres).
+excluirProprietario: exclusão bem-sucedida (204, com confirmação
+adicional via GET subsequente retornando 404) e id inexistente (404).
+Pendência registrada: assim como em LivroControllerTest, os testes
+relativos de contagem (listAllProprietarios e listAllLivros) ficam
+condicionados à futura resolução do isolamento do banco de testes — caso esse
+isolamento seja implementado, pode valer a pena revisitar esses testes para
+afirmações de estado absoluto, mais simples de ler que a verificação relativa.
+---
 
 ## [v1.1.0] - Planejado
 

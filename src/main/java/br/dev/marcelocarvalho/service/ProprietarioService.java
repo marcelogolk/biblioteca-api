@@ -52,7 +52,6 @@ public class ProprietarioService {
         return new ProprietarioDTO(proprietarioEntity);
     }
 
-
     @Transactional
     public ProprietarioDTO atualizarProprietario(Long id , ProprietarioAtualizacaoDTO proprietarioAtualizacaoDTO) {
         Proprietario proprietario = proprietarioRepository.findById(id);
@@ -84,4 +83,5 @@ public class ProprietarioService {
                 .firstResultOptional()
                 .isPresent();
     }
+
 }
