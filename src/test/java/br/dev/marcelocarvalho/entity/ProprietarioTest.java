@@ -18,8 +18,6 @@ class ProprietarioTest {
         proprietario = new Proprietario("primeiro Proprietario", cpfUnico);
         segundoProprietario = new Proprietario("segundo Proprietario", cpfUnico);
         terceiroProprietario = new Proprietario("terceiro Proprietario", cpfDiferente);
-
-
     }
 
     @Test
@@ -31,7 +29,7 @@ class ProprietarioTest {
     @Test
     @DisplayName("Simetria: se proprietario.equals(segundoProprietario) é true, segundoPropriertario.equals(proprietario) também deve ser true")
     void testEquals_SimetriaDeveRetornarTrue() {
-        assertEquals(proprietario,segundoProprietario);
+        assertEquals(proprietario, segundoProprietario);
         assertEquals(segundoProprietario, proprietario);
     }
 
@@ -39,14 +37,18 @@ class ProprietarioTest {
     @DisplayName("proprietarios diferentes deve retornar falso")
     void testEquals_DiferentesProprietariosDeveretornarFalse() {
         assertNotEquals(proprietario, terceiroProprietario);
-
     }
 
     @Test
     @DisplayName("proprietario coparado com null deve retornar falso")
     void testEquals_ProprietariosComparadoComNullDeveretornarFalse() {
         assertNotEquals(null, proprietario);
+    }
 
+    @Test
+    @DisplayName("proprietario comparado com objeto de outra classe deve retornar falso")
+    void testEquals_ProprietarioComparadoComOutraClasseDeveRetornarFalse() {
+        assertNotEquals(proprietario, "uma string qualquer");
     }
 
     @Test
@@ -62,9 +64,14 @@ class ProprietarioTest {
     }
 
     @Test
-    @DisplayName("proprietarios com o cpf diferentes não devem ter o HashCode diferente")
-    void testHashCode_ProprietariosComCpfDiferentesDevemRetornarFalse() {
+    @DisplayName("proprietarios com cpf diferentes devem ter HashCode diferente")
+    void testHashCode_ProprietariosComCpfDiferentesDevemTerHashCodeDiferente() {
         assertNotEquals(proprietario.hashCode(), terceiroProprietario.hashCode());
     }
 
+    @Test
+    @DisplayName("toString não deve lançar exceção")
+    void testToString_NaoDeveLancarExcecao() {
+        assertDoesNotThrow(() -> proprietario.toString());
+    }
 }

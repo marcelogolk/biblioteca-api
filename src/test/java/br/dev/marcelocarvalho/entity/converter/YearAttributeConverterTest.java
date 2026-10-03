@@ -3,9 +3,7 @@ package br.dev.marcelocarvalho.entity.converter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
 import java.time.Year;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 class YearAttributeConverterTest {
@@ -20,7 +18,7 @@ class YearAttributeConverterTest {
     @Test
     @DisplayName("Deve converter Year para Integer com sucesso")
     void convertToDatabaseColumnTest() {
-        Year year = java.time.Year.of(2026);
+        Year year = Year.of(2026);
         Integer result= yearAttributeConverter.convertToDatabaseColumn(year);
         assertNotNull(result);
         assertEquals(2026, result);

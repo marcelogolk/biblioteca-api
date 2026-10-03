@@ -33,7 +33,7 @@ class LivroTest {
     @Test
     @DisplayName("Simetria: se proprietario.equals(segundoProprietario) é true, segundoPropriertario.equals(proprietario) também deve ser true")
     void testEquals_SimetriaDeveRetornarTrue() {
-        assertEquals(primeiroLivro,segundoLivro);
+        assertEquals(primeiroLivro, segundoLivro);
         assertEquals(segundoLivro, primeiroLivro);
     }
 
@@ -41,14 +41,18 @@ class LivroTest {
     @DisplayName("Livros diferentes deve retornar falso")
     void testEquals_DiferentesLivrosDeveretornarFalse() {
         assertNotEquals(primeiroLivro, terceiroLivro);
-
     }
 
     @Test
-    @DisplayName("livro coparado com null deve retornar falso")
+    @DisplayName("Livro comparado com null deve retornar falso")
     void testEquals_LivroComparadoComNullDeveretornarFalse() {
         assertNotEquals(null, primeiroLivro);
+    }
 
+    @Test
+    @DisplayName("Livro comparado com objeto de outra classe deve retornar falso")
+    void testEquals_LivroComparadoComOutraClasseDeveRetornarFalse() {
+        assertNotEquals(primeiroLivro, "uma string qualquer");
     }
 
     @Test
@@ -64,8 +68,15 @@ class LivroTest {
     }
 
     @Test
-    @DisplayName("proprietarios com o cpf diferentes não devem ter o HashCode diferente")
-    void testHashCode_ProprietariosComCpfDiferentesDevemRetornarFalse() {
+    @DisplayName("Livros com UUID diferentes devem ter HashCode diferente")
+    void testHashCode_LivrosComUuidDiferentesDevemTerHashCodeDiferente() {
         assertNotEquals(primeiroLivro.hashCode(), terceiroLivro.hashCode());
+    }
+
+    @Test
+    @DisplayName("toString não deve lançar exceção quando o proprietário é null")
+    void testToString_ComProprietarioNullNaoDeveLancarExcecao() {
+        primeiroLivro.setProprietario(null);
+        assertDoesNotThrow(() -> primeiroLivro.toString());
     }
 }

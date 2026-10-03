@@ -553,12 +553,12 @@ cenários que criam um proprietário via helper.
 ### Ação
 
 Implementados os testes para os cinco endpoints do ProprietarioController:
-listAllProprietarios: teste relativo de contagem (quantidade antes/depois
+`listAllProprietarios`: teste relativo de contagem (quantidade antes/depois
 da criação de novos proprietários), no mesmo espírito do teste pendente para
 GET /api/livros, evitando depender do estado absoluto da tabela.
 buscarProprietarioById: cenários de id existente (validando id, nome e
 cpf do retorno) e id inexistente (404).
-incluirProprietario: sete cenários via @ParameterizedTest/@MethodSource
+`incluirProprietario`: sete cenários via @ParameterizedTest/@MethodSource
 (caminho feliz, nome ausente, nome com 2 caracteres, nome com exatamente 3
 caracteres, CPF ausente, CPF com menos de 11 dígitos, CPF com máscara),
 usando um placeholder (__CPF__) substituído por um CPF único gerado no
@@ -567,16 +567,87 @@ LivroControllerTest para proprietarioId. Adicionado também um teste
 isolado para CPF duplicado (409), por depender de um proprietário
 previamente existente e não se encaixar no @MethodSource dos demais
 cenários.
-atualizarProprietario: caminho feliz, id inexistente (404) e três
+`atualizarProprietario`: caminho feliz, id inexistente (404) e três
 cenários de validação do campo nome via @MethodSource (ausente, 2
 caracteres, exatamente 3 caracteres).
-excluirProprietario: exclusão bem-sucedida (204, com confirmação
+`excluirProprietario`: exclusão bem-sucedida (204, com confirmação
 adicional via GET subsequente retornando 404) e id inexistente (404).
 Pendência registrada: assim como em LivroControllerTest, os testes
 relativos de contagem (listAllProprietarios e listAllLivros) ficam
 condicionados à futura resolução do isolamento do banco de testes — caso esse
 isolamento seja implementado, pode valer a pena revisitar esses testes para
 afirmações de estado absoluto, mais simples de ler que a verificação relativa.
+
+---
+
+### 2026-10-03 - Testes de `ProprietarioService` com `@QuarkusTest` e `@InjectMock`
+
+#### Contexto
+
+Com os testes de Controller para `ProprietarioController` e `LivroController`
+encerrados, iniciou-se a cobertura da camada de Service, começando por
+`ProprietarioService`. Diferente dos testes de Controller (que exercitam a
+API de ponta a ponta, incluindo o banco real), os testes de Service devem
+isolar a lógica de negócio do acesso a dados — o que exige mockar
+`ProprietarioRepository`.
+
+Avaliou-se duas abordagens: JUnit puro com Mockito (`@ExtendWith(MockitoExtension.class)`,
+`@Mock`, `@InjectMocks`), ou `@QuarkusTest` com `@InjectMock`, que substitui o
+bean real do repositório no próprio contexto de injeção de dependências do
+Quarkus.
+
+#### Decisão
+
+Optado por `@QuarkusTest` com `@Inject` (para o Service real) e `@InjectMock`
+(para o Repository mockado), em vez de Mockito puro.
+
+#### Justificativa
+
+- Mantém consistência com o restante da suíte de testes do projeto, que já
+  usa `@QuarkusTest` nos testes de Controller.
+- `@InjectMock` substitui o bean gerenciado pelo CDI do Quarkus, evitando
+  divergências entre o comportamento do mock em teste e o comportamento real
+  da injeção em produção.
+- Exige a extensão `quarkus-junit-mockito` (nome atual do artefato na versão
+  3.39.3; o artefato antigo, `quarkus-junit5-mockito`, foi relocado).
+
+#### Ação
+
+- Adicionada a dependência `quarkus-junit-mockito` ao `pom.xml`, com
+  `<scope>test</scope>` e sem versão explícita (gerenciada pelo
+  `quarkus-bom`).
+- Criada `ProprietarioServiceTest`, cobrindo os cinco métodos do Service:
+  - `listAllProprietario`: lista convertida corretamente para DTO, incluindo
+    o caso de lista vazia.
+  - `buscarProprietarioById`: retorno de DTO para id existente (mockando
+    `findById` retornando a entidade) e `404` para id inexistente (mockando
+    retorno `null`).
+  - `incluirProprietario`: caminho feliz (persistência confirmada via
+    `verify`) e conflito de CPF duplicado (`409`), mockando os dois níveis
+    de chamada do Panache (`find("cpf", ...)` retornando um mock de
+    `PanacheQuery`, que por sua vez retorna o `Optional` de
+    `firstResultOptional()`).
+  - `atualizarProprietario`: nome atualizado refletido no DTO de retorno
+    (mockando `findById` com uma entidade real, não mockada, permitindo que
+    `setNome` opere normalmente) e `404` para id inexistente.
+  - `deletarProprietarioById`: execução sem exceção quando `deleteById`
+    retorna `true`, e `404` quando retorna `false`.
+- Confirmado que o método privado `isCPFJaExiste` não exige teste próprio:
+  suas duas branches já são exercitadas indiretamente pelos dois cenários de
+  `incluirProprietario`.
+
+#### Aprendizados
+
+- `@InjectMock` requer a extensão `quarkus-junit-mockito`; sem ela, a
+  anotação não tem efeito e o bean real continua sendo injetado.
+- Mockar um método encadeado do Panache (como `find(...).firstResultOptional()`)
+  exige mockar cada elo da cadeia separadamente — o retorno intermediário
+  (`PanacheQuery`) também precisa ser um mock configurado, não apenas o
+  resultado final.
+- Ao mockar apenas o Repository (não a entidade), métodos que alteram estado
+  do objeto retornado (como `setNome`) continuam funcionando normalmente,
+  pois o objeto em si é uma instância real, não um mock.
+
 ---
 
 ## [v1.1.0] - Planejado
