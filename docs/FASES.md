@@ -35,12 +35,12 @@ O projeto será desenvolvido de forma incremental, com releases versionadas. Cad
   - `DELETE /api/livros/{id}` — Deletar
 - [x] Validações de formato básicas via Bean Validation (`@NotBlank`, `@Size`, `@Pattern`)
 - [x] Tratamento de erros de negócio e concorrência (400, 404, 409, 500)
-- [~] Testes unitários (70% cobertura) — em andamento:
+- [~] Testes unitários (70% cobertura) — alcançado 93%:
   - [x] Testes de entidade (`ProprietarioTest`, `LivroTest`, `YearAttributeConverterTest`)
   - [x] Testes de integração do `LivroController` (`LivroControllerTest`, incluindo inclusão, atualização e exclusão)
-  - [ ] Testes de integração do `ProprietarioController` (estrutura criada, implementação pendente)
-  - [ ] Testes unitários do `LivroService` com mocks (estrutura criada, implementação pendente)
-  - [ ] Teste do cenário "lista vazia" em `listAllLivros` (depende de decisão sobre isolamento do banco de testes)
+  - [x] Testes de integração do `ProprietarioController` (`ProprietarioController`, incluindo inclusão, atualização e exclusão)
+  - [x] Testes unitários do `LivroService` com mocks. 
+  - [x] Teste do cenário "lista vazia" em `listAllLivros` (escolhido teste simples sem banco de teste isolado)
 - [x] Documentação Swagger UI
 - [x] Containerização do banco de dados (Postgres via Docker Compose, local e produção)
 - [ ] Deploy em VPS Oracle Cloud (camadas 0 a 5 concluídas; containerização da API e exposição à internet pendentes)
@@ -52,16 +52,14 @@ controller/ → service/ → repository/ → banco de dados
 
 - Revisar uso de path param versus query param na busca de livro por categoria (segmento de rota vazio retorna `404` em vez de alcançar o método).
 - Implementar regra de bloqueio de exclusão de proprietário com livros associados (RN07), evitando erro `500` cru.
-- Corrigir possível erro de digitação em `application.properties`
-  (`%prod.quarkus.hernate-orm.database.generation`).
-- Isolar o banco de dados usado pelos testes automatizados do banco usado manualmente em desenvolvimento.
+- Isolar o banco de dados usado pelos testes automatizados do banco usado manualmente em desenvolvimento deixado para proxima fase.
 
 ### Entregáveis
 
 - Código-fonte versionado no GitHub
 - README com instruções de setup
 - Documentação Swagger automática
-- Testes com cobertura mínima de 70%
+- Testes com cobertura mínima de 70% (93% alcançado)
 - API rodando em produção na VPS
 
 ---
