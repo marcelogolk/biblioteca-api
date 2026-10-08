@@ -1,0 +1,134 @@
+### ============================================================
+### Biblioteca API — testes manuais (REST Client / IntelliJ HTTP Client)
+### Cobre os cenários mínimos de validação da Camada 6
+### ============================================================
+
+@baseUrl = http://localhost:8080/api
+
+### ------------------------------------------------------------
+### PROPRIETÁRIO
+### ------------------------------------------------------------
+
+### Criar um proprietário (esperado: 201 Created)
+# @name criarProprietario
+POST {{baseUrl}}/proprietarios
+Content-Type: application/json
+
+{
+  "nome": "Marcelo Carvalho",
+  "cpf": "12345678901"
+}
+
+### Listar todos os proprietários (esperado: 200 OK)
+GET {{baseUrl}}/proprietarios
+
+### Buscar proprietário por ID (esperado: 200 OK)
+# Ajuste o ID conforme o retorno da criação acima
+GET {{baseUrl}}/proprietarios/1
+
+### Atualizar nome do proprietário (esperado: 200 OK)
+# CPF não é alterável por design (DTO de atualização não possui esse campo)
+PUT {{baseUrl}}/proprietarios/1
+Content-Type: application/json
+
+{
+  "nome": "Marcelo Carvalho Silva"
+}
+
+### Buscar proprietário inexistente (esperado: 404 Not Found)
+GET {{baseUrl}}/proprietarios/99999
+
+### Tentar criar proprietário com CPF duplicado (esperado: 409 Conflict)
+POST {{baseUrl}}/proprietarios
+Content-Type: application/json
+
+{
+  "nome": "Outro Nome",
+  "cpf": "12345678901"
+}
+
+### Excluir proprietário (esperado: 204 No Content)
+# Use um ID sem livros associados, já que a regra de restrição
+# ainda não está implementada (ver pendências do projeto)
+DELETE {{baseUrl}}/proprietarios/1
+
+
+### ------------------------------------------------------------
+### LIVRO
+### ------------------------------------------------------------
+
+### Criar um livro vinculado a um proprietário existente (esperado: 201 Created)
+# @name criarLivro
+POST {{baseUrl}}/livros
+Content-Type: application/json
+
+{
+  "titulo": "Dom Casmurro",
+  "autor": "Machado de Assis",
+  "categoria": "Romance",
+  "anoDePublicacao": 1899,
+  "proprietarioId": 1
+}
+
+### Listar todos os livros (esperado: 200 OK)
+GET {{baseUrl}}/livros
+
+### Buscar livro por ID (esperado: 200 OK)
+GET {{baseUrl}}/livros/1
+
+### Buscar livros por categoria (esperado: 200 OK)
+GET {{baseUrl}}/livros/categoria/Romance
+
+### Buscar livros por proprietário (esperado: 200 OK)
+GET {{baseUrl}}/livros/proprietario/1
+
+### Atualizar dados do livro (esperado: 200 OK)
+# Proprietário não é alterável por design (DTO de atualização não possui esse campo)
+PUT {{baseUrl}}/livros/1
+Content-Type: application/json
+
+{
+  "titulo": "Dom Casmurro",
+  "autor": "Machado de Assis",
+  "categoria": "Literatura Brasileira",
+  "anoDePublicacao": 1899
+}
+
+### Tentar criar livro com ano de publicação futuro (esperado: 400 Bad Request)
+POST {{baseUrl}}/livros
+Content-Type: application/json
+
+{
+  "titulo": "Livro do Futuro",
+  "autor": "Autor Teste",
+  "categoria": "Ficção",
+  "anoDePublicacao": 2099,
+  "proprietarioId": 1
+}
+
+### Tentar criar livro com proprietário inexistente (esperado: 404 ou 400)
+POST {{baseUrl}}/livros
+Content-Type: application/json
+
+{
+  "titulo": "Livro Órfão",
+  "autor": "Autor Teste",
+  "categoria": "Ficção",
+  "anoDePublicacao": 2020,
+  "proprietarioId": 99999
+}
+
+### Buscar livro inexistente (esperado: 404 Not Found)
+GET {{baseUrl}}/livros/99999
+
+### Excluir livro (esperado: 204 No Content)
+DELETE {{baseUrl}}/livros/1
+
+
+### ------------------------------------------------------------
+### TESTE DE PERSISTÊNCIA (Camada 6 — obrigatório)
+### ------------------------------------------------------------
+# 1. Rode "criarProprietario" e "criarLivro" acima, anote os IDs retornados.
+# 2. Rode: docker compose -f vps/docker-compose.yml restart
+# 3. Rode os GETs de proprietário e livro novamente com os mesmos IDs.
+# 4. Confirme que os dados continuam disponíveis (NÃO use "down -v" entre os passos).

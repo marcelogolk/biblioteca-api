@@ -1,0 +1,243 @@
+
+
+
+<!DOCTYPE html>
+<html id="htmlId">
+<head>
+  <meta http-equiv="Content-Type" content="text/html;charset=UTF-8"> 
+  <title>Coverage Report > LivroService</title>
+  <style type="text/css">
+    @import "../../css/coverage.css";
+    @import "../../css/idea.min.css";
+  </style>
+  <script type="text/javascript" src="../../js/highlight.min.js"></script>
+  <script type="text/javascript" src="../../js/highlightjs-line-numbers.min.js"></script>
+</head>
+
+<body>
+<div class="content">
+<div class="breadCrumbs">
+Current scope:     <a href="../../index.html">all classes</a>
+    <span class="separator">|</span>
+    <a href="../index.html">br.dev.marcelocarvalho.service</a>
+</div>
+
+<h1>Coverage Summary for Class: LivroService (br.dev.marcelocarvalho.service)</h1>
+
+<table class="coverageStats">
+<tr>
+  <th class="name">Class</th>
+<th class="coverageStat 
+">
+  Class, %
+</th>
+<th class="coverageStat 
+">
+  Method, %
+</th>
+<th class="coverageStat 
+">
+  Branch, %
+</th>
+<th class="coverageStat 
+">
+  Line, %
+</th>
+</tr>
+<tr>
+  <td class="name">LivroService</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (1/1)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (11/11)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (6/6)
+  </span>
+</td>
+<td class="coverageStat">
+  <span class="percent">
+    100%
+  </span>
+  <span class="absValue">
+    (60/60)
+  </span>
+</td>
+</tr>
+
+</table>
+
+<br/>
+<br/>
+
+
+<pre>
+<code class="sourceCode" id="sourceCode">&nbsp;package br.dev.marcelocarvalho.service;
+&nbsp;
+&nbsp;import br.dev.marcelocarvalho.dto.*;
+&nbsp;import br.dev.marcelocarvalho.entity.Livro;
+&nbsp;import br.dev.marcelocarvalho.entity.Proprietario;
+&nbsp;import br.dev.marcelocarvalho.repository.LivroRepository;
+&nbsp;import br.dev.marcelocarvalho.repository.ProprietarioRepository;
+&nbsp;import jakarta.enterprise.context.ApplicationScoped;
+&nbsp;import jakarta.inject.Inject;
+&nbsp;import jakarta.transaction.Transactional;
+&nbsp;import jakarta.validation.Valid;
+&nbsp;import jakarta.ws.rs.WebApplicationException;
+&nbsp;import jakarta.ws.rs.core.Response;
+&nbsp;
+&nbsp;import java.util.List;
+&nbsp;
+&nbsp;@ApplicationScoped
+<b class="fc">&nbsp;public class LivroService {</b>
+&nbsp;
+&nbsp;    @Inject
+&nbsp;    LivroRepository livroRepository;
+&nbsp;
+&nbsp;    @Inject
+&nbsp;    ProprietarioRepository proprietarioRepository;
+&nbsp;
+&nbsp;    public List&lt;LivroDTO&gt; listAllLivros() {
+<b class="fc">&nbsp;        return livroRepository.listAll()</b>
+<b class="fc">&nbsp;                .stream()</b>
+<b class="fc">&nbsp;                .map(LivroDTO::new)</b>
+<b class="fc">&nbsp;                .toList();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public LivroDTO buscarLivroById(Long id){
+<b class="fc">&nbsp;        Livro livro = livroRepository.findById(id);</b>
+<b class="fc">&nbsp;        if (livro != null){</b>
+<b class="fc">&nbsp;            return new LivroDTO(livro);</b>
+&nbsp;        } else {
+<b class="fc">&nbsp;            throw new WebApplicationException(</b>
+<b class="fc">&nbsp;                    Response.status(Response.Status.NOT_FOUND) // 404</b>
+<b class="fc">&nbsp;                            .entity(&quot;Não encontrado Livro com o id:&quot;+ id)</b>
+<b class="fc">&nbsp;                            .build()</b>
+&nbsp;            );
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;LivroDTO&gt; buscarLivroByCategoria(String categoria){
+<b class="fc">&nbsp;        return livroRepository.findByCategoria(categoria)</b>
+<b class="fc">&nbsp;                .stream()</b>
+<b class="fc">&nbsp;                .map(LivroDTO::new)</b>
+<b class="fc">&nbsp;                .toList();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    public List&lt;LivroDTO&gt; buscarLivroByProprietarioId(Long proprietarioId){
+<b class="fc">&nbsp;        return livroRepository.findByProprietarioId(proprietarioId)</b>
+<b class="fc">&nbsp;                .stream()</b>
+<b class="fc">&nbsp;                .map(LivroDTO::new)</b>
+<b class="fc">&nbsp;                .toList();</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public LivroDTO incluirLivro(@Valid LivroInclusaoDTO livroInclusaoDTO){
+<b class="fc">&nbsp;        Proprietario proprietario = proprietarioRepository</b>
+<b class="fc">&nbsp;                .findByIdOptional(livroInclusaoDTO.proprietarioId())</b>
+<b class="fc">&nbsp;                .orElseThrow(</b>
+<b class="fc">&nbsp;                        () -&gt; new WebApplicationException(</b>
+&nbsp;                                Response
+<b class="fc">&nbsp;                                        .status(Response.Status.NOT_FOUND)</b>
+<b class="fc">&nbsp;                                        .entity(&quot;Livro precisa de ter um Proprietário cadastrado para ser incluido&quot;)</b>
+<b class="fc">&nbsp;                                        .build()</b>
+&nbsp;                        )
+&nbsp;                );
+&nbsp;
+<b class="fc">&nbsp;        Livro livroEntity = new Livro(</b>
+<b class="fc">&nbsp;                livroInclusaoDTO.titulo(),</b>
+<b class="fc">&nbsp;                livroInclusaoDTO.autor(),</b>
+<b class="fc">&nbsp;                livroInclusaoDTO.categoria(),</b>
+<b class="fc">&nbsp;                livroInclusaoDTO.anoDePublicacao(),</b>
+&nbsp;                proprietario);
+&nbsp;
+<b class="fc">&nbsp;        if (isUuidJaExiste(livroEntity.getUuid())) {</b>
+<b class="fc">&nbsp;            throw new WebApplicationException(</b>
+<b class="fc">&nbsp;                    Response.status(Response.Status.CONFLICT)</b>
+<b class="fc">&nbsp;                            .entity(&quot;Ocorreu um conflito na geração do identificador único do livro. Tente novamente.&quot;)</b>
+<b class="fc">&nbsp;                            .build()</b>
+&nbsp;            );
+&nbsp;        }
+<b class="fc">&nbsp;        livroRepository.persist(livroEntity);</b>
+<b class="fc">&nbsp;        return new LivroDTO(livroEntity);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public LivroDTO atualizarLivro(Long id, @Valid LivroAtualizacaoDTO livroAtualizacaoDTO) {
+<b class="fc">&nbsp;        Livro livro = livroRepository</b>
+<b class="fc">&nbsp;                .findByIdOptional(id)</b>
+<b class="fc">&nbsp;                .orElseThrow(</b>
+<b class="fc">&nbsp;                        () -&gt; new WebApplicationException(</b>
+&nbsp;                                Response
+<b class="fc">&nbsp;                                        .status(Response.Status.NOT_FOUND)</b>
+<b class="fc">&nbsp;                                        .entity(&quot;Não encontrado Livro com o id:&quot; + id)</b>
+<b class="fc">&nbsp;                                        .build()</b>
+&nbsp;                        )
+&nbsp;                );
+<b class="fc">&nbsp;        livro.setTitulo(livroAtualizacaoDTO.titulo());</b>
+<b class="fc">&nbsp;        livro.setAutor(livroAtualizacaoDTO.autor());</b>
+<b class="fc">&nbsp;        livro.setCategoria(livroAtualizacaoDTO.categoria());</b>
+<b class="fc">&nbsp;        livro.setAnoDePublicacao(livroAtualizacaoDTO.anoDePublicacao());</b>
+<b class="fc">&nbsp;        return new LivroDTO(livro);</b>
+&nbsp;    }
+&nbsp;
+&nbsp;    @Transactional
+&nbsp;    public void deletarLivroById(Long id) {
+<b class="fc">&nbsp;        if (!livroRepository.deleteById(id)) {</b>
+<b class="fc">&nbsp;            throw new WebApplicationException(</b>
+<b class="fc">&nbsp;                    Response.status(Response.Status.NOT_FOUND)</b>
+<b class="fc">&nbsp;                            .entity(&quot;Livro não encontrado&quot;)</b>
+<b class="fc">&nbsp;                            .build()</b>
+&nbsp;            );
+&nbsp;        }
+&nbsp;    }
+&nbsp;
+&nbsp;    private boolean isUuidJaExiste(String uuid) {
+<b class="fc">&nbsp;        return livroRepository</b>
+<b class="fc">&nbsp;                .find(&quot;uuid&quot;, uuid)</b>
+<b class="fc">&nbsp;                .firstResultOptional()</b>
+<b class="fc">&nbsp;                .isPresent();</b>
+&nbsp;    }
+&nbsp;}
+</code>
+</pre>
+</div>
+
+<script type="text/javascript">
+(function() {
+    var msie = false, msie9 = false;
+    /*@cc_on
+      msie = true;
+      @if (@_jscript_version >= 9)
+        msie9 = true;
+      @end
+    @*/
+
+    if (!msie || msie && msie9) {
+      hljs.highlightAll()
+      hljs.initLineNumbersOnLoad();
+    }
+})();
+</script>
+
+<div class="footer">
+    
+    <div style="float:right;">generated on 2026-10-03 20:51</div>
+</div>
+</body>
+</html>

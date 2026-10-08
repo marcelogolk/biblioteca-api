@@ -649,7 +649,92 @@ Optado por `@QuarkusTest` com `@Inject` (para o Service real) e `@InjectMock`
   pois o objeto em si é uma instância real, não um mock.
 
 ---
+### 2026-10-06 - Decisão: Adiamento da Revisão do Log SQL em Produção
 
+#### Contexto
+
+Na containerização da API (Camada 6 do deploy em VPS), o perfil `%prod` do
+`application.properties` herda a configuração global `quarkus.hibernate-orm.log.sql=true`,
+originalmente definida para facilitar depuração em ambiente de desenvolvimento.
+Ao validar a aplicação rodando via Docker Compose com esse perfil ativo,
+identificou-se que essa mesma configuração permanece ativa também em produção,
+sem ajuste específico por perfil.
+
+#### Decisão
+
+Manter `log.sql=true` ativo globalmente (incluindo `%prod`) durante a Camada 6,
+adiando a revisão definitiva dessa configuração para a fase de hardening de
+segurança da API (pós Fase 2).
+
+#### Justificativa
+
+- **Utilidade imediata:** durante a validação de containerização e persistência
+  (Camada 6), visibilidade total de SQL ajuda a depurar problemas de conexão,
+  schema e comportamento do Hibernate entre containers.
+- **Riscos identificados, não endereçados ainda:** log de SQL completo em
+  produção real traria (a) overhead de performance sob carga, por volume de
+  I/O de log, e (b) risco de segurança, já que parâmetros de queries (dados
+  reais sendo inseridos/consultados) ficam expostos em texto puro nos logs
+  do container.
+- **Adiamento consciente, não esquecimento:** a aplicação ainda não está
+  exposta publicamente nesta fase (Camada 7 ainda pendente), e a revisão de
+  logging se encaixa melhor junto das demais decisões de segurança (autenticação,
+  autorização) ainda não tratadas.
+
+#### Ação
+
+- Mantido `quarkus.hibernate-orm.log.sql=true` sem diferenciação por perfil
+  por enquanto.
+- Registrada pendência no roadmap: revisar/desabilitar log SQL em `%prod`
+  (ou substituir por logging seletivo/estruturado) antes de qualquer exposição
+  pública real da API.
+
+---
+### 2026-10-06 - Decisão: Adoção de Arquivo `.http` para Testes Manuais de Endpoints
+
+#### Contexto
+
+Durante a Camada 6 (containerização e validação da API), surgiu a necessidade
+de uma forma prática de testar manualmente os endpoints REST (CRUD de
+Proprietário e Livro, cenários de erro como 404/409, teste de persistência
+após reinício dos containers). Avaliou-se duas abordagens:
+
+1. Utilizar uma ferramenta externa de GUI, como Postman, com coleções
+   exportadas/importadas separadamente do repositório.
+2. Utilizar um arquivo de texto simples no formato `.http`, executável
+   diretamente por extensões de editor (ex: REST Client no VS Code, ou
+   suporte nativo do IntelliJ), sem depender de software adicional instalado.
+
+#### Decisão
+
+Adotado o arquivo `.http` como forma padrão de testes manuais da API, mantido
+dentro do próprio repositório do projeto (pasta `http/`) e versionado no
+GitHub junto com o restante do código.
+
+#### Justificativa
+
+- **Independência de ferramenta externa:** qualquer pessoa que clonar o
+  repositório já tem exemplos de requisições prontos para uso, sem precisar
+  instalar ou configurar Postman (ou ferramenta equivalente) separadamente.
+- **Rastreabilidade e versionamento:** por ser um arquivo de texto comum, o
+  `.http` acompanha o histórico de mudanças da API no próprio Git — diferente
+  de uma coleção Postman, que vive fora do repositório (ou exigiria exportação
+  manual recorrente para se manter sincronizada).
+- **Simplicidade suficiente para o estágio atual do projeto:** não há, por
+  enquanto, necessidade de recursos avançados de Postman (scripts de teste
+  automatizado, ambientes múltiplos complexos), tornando o formato `.http`
+  uma escolha enxuta e alinhada ao restante da stack do projeto.
+
+#### Ação
+
+- Criada a pasta `http/` na raiz do projeto.
+- Criado o arquivo `http/biblioteca.http`, cobrindo os cenários mínimos de
+  validação definidos para a Camada 6: CRUD completo de Proprietário e Livro,
+  busca por categoria e por proprietário, casos de erro (404 para recurso
+  inexistente, 409 para CPF duplicado, 400 para ano de publicação futuro), e
+  roteiro de teste de persistência após reinício dos containers.
+
+---
 ## [v1.1.0] - Planejado
 
 - Melhorias em funcionalidades e tratamento de erros.
