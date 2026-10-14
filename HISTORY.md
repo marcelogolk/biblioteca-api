@@ -733,8 +733,45 @@ GitHub junto com o restante do código.
   busca por categoria e por proprietário, casos de erro (404 para recurso
   inexistente, 409 para CPF duplicado, 400 para ano de publicação futuro), e
   roteiro de teste de persistência após reinício dos containers.
+---
+### 2026-10-12 — Validação manual da Camada 6: testes da API e persistência em Docker
+
+#### Contexto
+
+Durante a validação da Biblioteca API containerizada, foi necessário confirmar que os endpoints funcionam no ambiente Docker Compose e que os dados permanecem disponíveis após a parada e a reinicialização dos serviços.
+
+#### Ação e resultado
+
+- Limpei as tabelas `livro` e `proprietario` com `TRUNCATE TABLE livro, proprietario RESTART IDENTITY CASCADE`, permitindo repetir os testes com os identificadores reiniciados.
+- Executei manualmente, pelo arquivo `http/biblioteca.http`, os cenários definidos para a API. Os resultados observados foram os esperados.
+- Criei um proprietário e um livro, anotei os identificadores retornados e consultei os registros antes e depois de parar e iniciar novamente os serviços com Docker Compose, sem remover o volume do banco.
+- Confirmei que os registros permaneceram disponíveis após o reinício dos containers.
+
+#### Observação
+
+Esta validação confirma o funcionamento manual da API e a persistência dos dados no volume Docker. Ela não substitui os testes automatizados da suíte Maven nem, por si só, confirma o deploy na VPS ou a conclusão de todos os critérios da Camada 6.
+---
+
+### 2026-10-14 — Validação manual da Camada 7: HTTPS via Nginx e restrição da porta 8080
+
+#### Contexto
+
+Após configurar o domínio da API com HTTPS e o Nginx como proxy reverso, foi necessário validar o acesso externo à aplicação e confirmar que a porta 8080 não poderia ser acessada diretamente, contornando o proxy.
+
+#### Ação e resultado
+
+- Testei, a partir da máquina local, o acesso direto à API pela porta 8080. A conexão expirou, confirmando que a porta não estava acessível externamente.
+- Acessei `https://api.marcelocarvalho.dev.br/api/livros` e confirmei a resposta `200 OK`, com a lista vazia.
+- Cadastrei três proprietários fictícios e três livros fictícios pela API HTTPS. Durante os testes, um cadastro de livro retornou `500` porque o payload usava `anoPublicacao`, enquanto a API espera o campo `anoDePublicacao`.
+- Consultei os logs do container da API, identifiquei a violação da restrição `NOT NULL` na coluna `anodepublicacao`, corrigi o nome do campo e concluí os cadastros.
+- Consultei os endpoints de proprietários e livros para confirmar os registros. Os três proprietários foram retornados, e os livros foram cadastrados corretamente após a correção.
+
+#### Observação
+
+A validação confirma o bloqueio do acesso externo direto à porta 8080 e o funcionamento do acesso HTTPS pelo Nginx. A API continua publicamente acessível pelo domínio; autenticação e autorização permanecem planejadas para a Fase 3. Foram usados somente dados fictícios.
 
 ---
+
 ## [v1.1.0] - Planejado
 
 - Melhorias em funcionalidades e tratamento de erros.

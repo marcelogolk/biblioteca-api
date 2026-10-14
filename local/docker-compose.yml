@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16.4
-    container_name: biblioteca_api_postgres
+    container_name: biblioteca_api_postgres_local
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}

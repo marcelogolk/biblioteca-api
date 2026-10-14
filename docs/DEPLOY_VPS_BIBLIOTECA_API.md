@@ -7,6 +7,11 @@ Documento de referência com todas as decisões, justificativas e passos prátic
 ---
 
 ## Mapa geral das camadas
+**Status atual:** Camadas 0 a 5 concluídas. Camada 6 validada localmente com a API e o PostgreSQL em containers; execução e validação na Oracle Cloud VPS ainda pendentes. Camada 7 (exposição à internet com reverse proxy e TLS) pendente.
+
+---
+
+## Mapa geral das camadas
 
 | Camada | Descrição | Status |
 |---|---|---|
@@ -15,8 +20,8 @@ Documento de referência com todas as decisões, justificativas e passos prátic
 | 2 | Firewall (rede) | ✅ Concluída |
 | 3 | Usuário não-root para o dia a dia | ✅ Concluída |
 | 4 | Docker na VPS | ✅ Concluída |
-| 5 | Postgres em container | ✅ Concluída (validada localmente) |
-| 6 | Build e execução da API Quarkus em container | ⏳ Pendente |
+| 5 | Postgres em container | ✅ Concluída |
+| 6 | Build e execução da API Quarkus em container | 🟡 Validada localmente; validação na VPS pendente |
 | 7 | Expor a API à internet (reverse proxy + TLS) | ⏳ Pendente |
 
 ---
@@ -393,7 +398,7 @@ docker compose exec postgres psql -U bibliotecario.admin -d postgres -c "\l"
 ```
 Confirmar: role `biblioteca_app` existe sem atributos de superusuário; banco `biblioteca_api` tem `biblioteca_app` como Owner.
 
-**Status: testado e validado localmente com sucesso — API conectando, Swagger funcional.**
+**Status:** PostgreSQL em container validado localmente e integrado à API containerizada pelo Docker Compose da VPS. A conexão entre os containers, os testes manuais da API e a persistência após reiniciar os serviços foram confirmados. A configuração e a execução na Oracle Cloud VPS ainda precisam ser verificadas.
 
 ---
 
@@ -404,10 +409,31 @@ Confirmar: role `biblioteca_app` existe sem atributos de superusuário; banco `b
 
 ---
 
+## Camada 6 — Build e execução da API em container
+
+### Validação local concluída
+
+A API Quarkus foi integrada ao Docker Compose da VPS e executada localmente junto com o PostgreSQL. Foram realizados os seguintes testes:
+
+- Criação de proprietário e livro pela API containerizada.
+- Execução manual dos cenários definidos em `http/biblioteca.http`, com os resultados esperados.
+- Reinício dos serviços com `docker compose down` e `docker compose up -d`, sem a opção `-v`.
+- Consulta dos registros após o reinício, confirmando que os dados permaneceram no volume do PostgreSQL.
+
+O teste confirmou a comunicação entre a API e o banco no Docker Compose e a persistência dos dados após a recriação dos containers, sem remover o volume.
+
+### Estado e trabalho restante
+
+A validação acima foi feita no ambiente local. Para considerar a Camada 6 concluída no contexto do deploy, ainda é necessário executar e verificar o mesmo conjunto essencial na Oracle Cloud VPS: construir ou disponibilizar a imagem compatível com a arquitetura da instância, iniciar os serviços, confirmar a conexão da API com o PostgreSQL e validar a persistência após reinício.
+
+A exposição pública por domínio, reverse proxy e TLS pertence à Camada 7 e permanece pendente.
+
+---
+
 ## Pendências gerais para as próximas sessões
 
-1. **Camada 6:** escrever o Dockerfile da API Quarkus (modo JVM), integrar ao `docker-compose.yml` da VPS (sem expor porta do Postgres, comunicação via nome do serviço `postgres`), replicar a estrutura `.env`/`init/` para a pasta `vps/`.
-2. **Camada 7:** configurar reverse proxy (Nginx), HTTPS via Let's Encrypt usando o domínio `marcelocarvalho.dev.br` (registro DNS tipo A apontando para o IP público da VPS).
+1. **Camada 6 na VPS:** aplicar na Oracle Cloud a configuração já validada localmente; confirmar arquitetura da imagem, variáveis de ambiente, conexão entre containers, endpoints e persistência após reinício.
+2. **Camada 7:** configurar reverse proxy (Nginx), HTTPS via Let's Encrypt e o domínio `marcelocarvalho.dev.br`, com o DNS apontando para o IP público da VPS.
 3. Revisar `hibernate-orm.database.generation` em produção ao introduzir Flyway (Fase 2).
 
 > Pendências de regras de negócio e cobertura de testes (exclusão de proprietário
