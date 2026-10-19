@@ -1,13 +1,20 @@
-# Deploy da Biblioteca API — Oracle Cloud VPS
+# Deploy da Biblioteca API - Oracle Cloud VPS
 
-Documento de referência com todas as decisões, justificativas e passos práticos para provisionar e configurar a VPS do zero. Serve tanto como registro histórico quanto como roteiro para refazer o processo, caso necessário.
+Documento de referência do provisionamento, configuração, implantação e exposição pública da Biblioteca API na Oracle Cloud Infrastructure (OCI). Registra decisões técnicas, estado atual, validações executadas e procedimentos operacionais para reconstrução do ambiente.
 
-**Status atual:** Camadas 0 a 5 concluídas. Camada 6 (containerizar a API) e Camada 7 (expor à internet) pendentes.
+## Estado atual
 
----
+**Camadas 0 a 7 concluídas.**
 
-## Mapa geral das camadas
-**Status atual:** Camadas 0 a 5 concluídas. Camada 6 validada localmente com a API e o PostgreSQL em containers; execução e validação na Oracle Cloud VPS ainda pendentes. Camada 7 (exposição à internet com reverse proxy e TLS) pendente.
+A Biblioteca API está executando na VPS Oracle Cloud, com a aplicação Quarkus e o PostgreSQL em containers Docker. A comunicação entre os containers, os endpoints REST e a persistência de dados foram validados. A API também está publicada por domínio próprio, com Nginx como proxy reverso e HTTPS configurado.
+
+**Endereço público validado:**
+
+```text
+https://api.marcelocarvalho.dev.br/api
+```
+
+A aplicação ainda não possui frontend. O domínio raiz permanece disponível para uso futuro.
 
 ---
 
@@ -15,84 +22,58 @@ Documento de referência com todas as decisões, justificativas e passos prátic
 
 | Camada | Descrição | Status |
 |---|---|---|
-| 0 | Provisionamento da instância (Oracle) | ✅ Concluída |
-| 1 | Hardening de SSH | ✅ Concluída |
-| 2 | Firewall (rede) | ✅ Concluída |
-| 3 | Usuário não-root para o dia a dia | ✅ Concluída |
-| 4 | Docker na VPS | ✅ Concluída |
-| 5 | Postgres em container | ✅ Concluída |
-| 6 | Build e execução da API Quarkus em container | 🟡 Validada localmente; validação na VPS pendente |
-| 7 | Expor a API à internet (reverse proxy + TLS) | ⏳ Pendente |
+| 0 | Provisionamento da instância Oracle Cloud |✅Concluída |
+| 1 | Hardening de SSH |✅Concluída |
+| 2 | Firewall e regras de rede |✅Concluída |
+| 3 | Usuário não-root para administração |✅Concluída |
+| 4 | Docker e Docker Compose na VPS |✅Concluída |
+| 5 | PostgreSQL em container |✅Concluída |
+| 6 | Build e execução da API Quarkus em container |✅Concluída e validada na VPS |
+| 7 | Exposição pública com domínio, Nginx e HTTPS |✅Concluída e validada |
 
 ---
 
-## Camada 0 — Provisionamento da instância
+# Camada 0 - Provisionamento da instância
 
-### Decisões tomadas
+## Decisões adotadas
 
-- **Provedor:** Oracle Cloud Infrastructure (OCI), tier Always Free.
-- **Região:** Brazil East (São Paulo) — `sa-saopaulo-1`. Existe uma segunda região no Brasil (Vinhedo) que pode ser usada como alternativa em caso de indisponibilidade de capacidade.
-- **Shape:** `VM.Standard.A1.Flex` (Ampere ARM).
-  - Escolhido em vez do `VM.Standard.E2.1.Micro` (AMD, 1 GB RAM) pela folga de recursos.
-  - **Atenção:** a Oracle reduziu a cota gratuita do A1.Flex de 4 OCPU/24 GB para **2 OCPU / 12 GB** em meados de 2026. A documentação pode estar desatualizada nos tutoriais mais antigos — confira sempre o valor atual no console.
-  - Risco de incompatibilidade de arquitetura (ARM vs x86) é mitigado porque as imagens oficiais usadas no projeto (Postgres, Java/`eclipse-temurin`) são multi-arch. O risco residual fica concentrado no processo de build de imagens próprias (ver Camada 6).
-- **Imagem:** Canonical Ubuntu 24.04 **Minimal** (aarch64).
-  - LTS (suporte de 5 anos), maduro (não é a versão mais recente lançada).
-  - Minimal escolhido para instalar apenas o necessário, sob controle consciente.
-  - **Trade-off aceito:** imagens Minimal em ARM não suportam **Instância Blindada** (Secure Boot/Measured Boot/TPM). Decisão consciente: priorizar a imagem enxuta em vez dessa camada extra de defesa em profundidade (que protege contra um cenário de ataque que já pressupõe outro comprometimento anterior).
-- **IMDS:** IMDSv2 obrigatório (exigir cabeçalho de autorização) — mitiga SSRF básico.
-- **Script de inicialização (cloud-init):** deixado em branco propositalmente, para aprender cada passo manualmente antes de automatizar no futuro.
-- **Migração ao vivo:** padrão (Oracle escolhe a melhor opção).
-- **Restaurar estado após manutenção:** ativado (a instância deve rodar 24/7).
-- **Oracle Cloud Agent (plugins):** apenas "Monitoramento de Instância de Computação" ativado. Bastion e demais plugins corporativos desativados (fora de escopo).
-- **Atributos de segurança (ZPR):** nenhum — complexidade desnecessária para uma única instância.
-- **Rede:** nova VCN e nova sub-rede pública criadas junto com a instância (CIDR `10.0.0.0/24`).
-- **IPv6:** não utilizado.
-- **IP público:** tipo **efêmero** (gratuito, mas muda se a instância for parada e iniciada — não muda em reboots normais do SO). Decisão consciente, sabendo do trade-off frente ao IP reservado (também gratuito, mas fixo).
-- **Armazenamento:** volume de boot de **100 GB** (decisão consciente, acima do padrão de 46.6 GB), com criptografia em trânsito ativada. Chave de criptografia gerenciada pela Oracle (não por chave própria).
-- **Chave SSH:** gerada localmente no Mint (`ssh-keygen -t ed25519`), com passphrase, dedicada exclusivamente a esta VPS (não reaproveitada do GitHub/Tailscale).
+- Provedor: Oracle Cloud Infrastructure, utilizando recursos do Free Tier.
+- Região: Brazil East, São Paulo (`sa-saopaulo-1`).
+- Shape: `VM.Standard.A1.Flex`, arquitetura ARM64/Ampere.
+- Sistema operacional: Ubuntu 24.04 Minimal para ARM64.
+- Rede: VCN e sub-rede pública próprias.
+- IPv6: não utilizado nesta implantação.
+- IMDSv2: cabeçalho de autorização obrigatório.
+- Cloud-init: não utilizado, para que a configuração inicial fosse executada e compreendida manualmente.
+- Oracle Cloud Agent: mantido apenas o monitoramento da instância.
+- Armazenamento: volume de boot de 100 GB, com criptografia em trânsito habilitada.
+- Acesso administrativo: chave SSH ED25519 dedicada à VPS.
+- Recuperação: Console Serial configurado como alternativa ao SSH.
 
-### Passo a passo resumido
+## Validações
 
-1. Console Oracle → Compute → Instances → Create Instance.
-2. Nome da instância, compartimento padrão.
-3. Alterar imagem → Canonical Ubuntu 24.04 Minimal (aarch64).
-4. Alterar forma → `VM.Standard.A1.Flex` → expandir e ajustar OCPU/memória para o teto gratuito atual.
-5. Gerenciamento → ativar cabeçalho de autorização do IMDS; deixar script de inicialização em branco; desmarcar plugins desnecessários do Cloud Agent (manter só monitoramento).
-6. Configuração de disponibilidade → deixar migração ao vivo no padrão; ativar "restaurar após manutenção".
-7. Segurança → Instância Blindada (opcional — não suportada em Minimal ARM).
-8. Rede → criar nova VCN e nova sub-rede pública; preencher Bloco CIDR (ex: `10.0.0.0/24`); IPv4 público fica pendente para configurar após a criação (limitação da tela simplificada).
-9. Chaves SSH → colar/upload da chave pública já gerada localmente.
-10. Armazenamento → definir tamanho do volume de boot; ativar criptografia em trânsito.
-11. Revisar tudo e criar.
-12. **Após a criação:** atribuir IP público manualmente (Instância → Rede → VNIC → Administração do IP → Designar IP público efêmero ou reservado). Alternativamente, usar o assistente "Conectar sub-rede pública à internet" (cria Internet Gateway, rota e NSG automaticamente).
+- Instância criada e iniciada corretamente.
+- Acesso SSH confirmado.
+- Conectividade de saída confirmada.
+- Arquitetura ARM64 considerada no build da imagem da aplicação.
 
 ---
 
-## Camada 1 — Hardening de SSH
+# Camada 1 - Hardening de SSH
 
-### Decisões e justificativas
+## Configuração aplicada
 
-1. **Autenticação apenas por chave** (`PasswordAuthentication no`) — elimina o vetor de força bruta por senha.
-2. **Root desabilitado via SSH** (`PermitRootLogin no`) — defesa em profundidade; mesmo com chave comprometida, o atacante cairia em usuário sem privilégio automático.
-3. **Porta customizada** (`51022` no lugar de `22`) — reduz ruído de bots de varredura em massa (não é segurança real, é higiene operacional).
-4. **`fail2ban`** — monitora falhas de autenticação e bane IPs automaticamente. Configurado para a porta customizada, com `findtime` reduzido e `bantime` aumentado para reduzir a janela de tentativas de bots.
-5. **`PubkeyAuthentication yes`** e **`KbdInteractiveAuthentication no`** explicitados no arquivo (evita depender de defaults implícitos da imagem que podem mudar).
-6. **Console Serial da Oracle configurado como plano de contingência** — via independente do SSH, útil se um autobanimento ou erro de configuração travar o acesso normal. Requer chave **RSA** específica (diferente da chave ED25519 usada no SSH normal).
+- Autenticação somente por chave pública.
+- Autenticação por senha desabilitada.
+- Login direto de `root` desabilitado.
+- Autenticação interativa por teclado desabilitada.
+- Porta SSH alterada de 22 para 51022.
+- Fail2ban habilitado para o serviço SSH.
+- Console Serial mantido como contingência.
 
-### Usuário administrativo
+Configuração principal:
 
-- Usuário `marcelo` criado com `sudo adduser marcelo` + `sudo usermod -aG marcelo sudo`.
-- Chave pública copiada do usuário padrão da imagem (`ubuntu`) para `~/.ssh/authorized_keys` de `marcelo`, com permissões corrigidas (`chown`, `chmod 700` no diretório, `chmod 600` no arquivo).
-
-### Passo a passo — configuração do `/etc/ssh/sshd_config`
-
-```bash
-sudo nano /etc/ssh/sshd_config
-```
-
-Ajustar/descomentar:
-```
+```text
 PasswordAuthentication no
 PermitRootLogin no
 PubkeyAuthentication yes
@@ -100,345 +81,409 @@ KbdInteractiveAuthentication no
 Port 51022
 ```
 
-Validar sintaxe antes de reiniciar:
-```bash
-sudo sshd -t
-```
+No Ubuntu 24.04, a alteração também foi aplicada ao `ssh.socket` por causa da ativação do SSH via socket do systemd.
 
-**Atenção — Ubuntu 24.04 usa socket activation.** Alterar `Port` no `sshd_config` não é suficiente; é necessário também sobrescrever o socket do systemd:
+## Procedimento de segurança
 
-```bash
-sudo systemctl edit ssh.socket
-```
-Conteúdo do override:
-```ini
-[Socket]
-ListenStream=
-ListenStream=51022
-```
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart ssh.socket
-sudo systemctl restart ssh.service
-```
-
-**Procedimento de segurança obrigatório para qualquer mudança em SSH/firewall:** manter a sessão atual aberta e testar a mudança em uma **segunda sessão nova**, só fechando a original após confirmar que a nova conexão funciona.
-
-### Configuração do `fail2ban`
-
-Nunca editar `/etc/fail2ban/jail.conf` diretamente (é sobrescrito em atualizações). Criar `jail.local`:
-
-```bash
-sudo nano /etc/fail2ban/jail.local
-```
-```ini
-[sshd]
-enabled = true
-port = 51022
-maxretry = 5
-findtime = 5m
-bantime = 4h
-```
-```bash
-sudo systemctl restart fail2ban
-sudo systemctl enable fail2ban
-```
-
-Verificação:
-```bash
-sudo fail2ban-client status sshd
-```
-
-### Console Serial (contingência)
-
-1. Gerar chave RSA dedicada: `ssh-keygen -t rsa -b 2048 -C "console-serial" -f ~/.ssh/id_rsa_console_biblioteca`
-2. Console Oracle → Instância → Recursos → Conexão da console → Criar conexão local → upload da chave pública RSA.
-3. Aguardar status "Ativo". Comando de conexão disponível no menu de Ações da conexão criada.
+Toda alteração de SSH ou firewall deve ser testada em uma segunda sessão antes do encerramento da sessão atual.
 
 ---
 
-## Camada 2 — Firewall
+# Camada 2 - Firewall e rede
 
-### As 4 camadas reais de firewall (não confundir com autenticação/detecção, que são categorias diferentes)
+## Camadas de filtragem utilizadas
 
-1. **NSG** (Network Security Group, nível de VNIC) — Oracle.
-2. **Security List** (nível de sub-rede) — Oracle.
-3. **`iptables` hardcoded** — já vem na imagem Oracle, arquivo `/etc/iptables/rules.v4`, carregado por mecanismo próprio da imagem (não é o `iptables-persistent` padrão do Ubuntu).
-4. **`ufw`** — instalado manualmente (`sudo apt install ufw`), persistência própria via `systemctl enable ufw` e arquivos internos em `/etc/ufw/`.
+- Network Security Group da Oracle Cloud.
+- Security List da sub-rede.
+- Regras persistidas de iptables no Ubuntu da imagem Oracle.
+- UFW no sistema operacional.
 
-### Regras importantes descobertas na prática
+## Portas previstas no estado final
 
-- **NSG e Security List são avaliados em lógica "OU"**: basta uma das duas permitir o tráfego para ele passar. Não é necessário duplicar regras nas duas, mas foi feito por clareza/redundância.
-- **Dentro do `iptables`/`ufw`, a ordem das regras importa** — processamento é sequencial, para na primeira regra que der match. A regra hardcoded da Oracle (liberando porta 22) e o `REJECT` catch-all vêm **antes** das cadeias do `ufw` — por isso o `ufw` sozinho não bastava para liberar a porta customizada; foi necessário também editar `/etc/iptables/rules.v4`.
-- **Egress (saída) já vem liberado por padrão** em todas as camadas Oracle (regra `0.0.0.0/0`, todos os protocolos) e no `ufw` (`allow outgoing`). Não expor porta de saída não é necessário mexer.
-- **Regras de ICMP tipo 3 (Destination Unreachable) devem permanecer liberadas** — não são sobre "ping", mas sobre Path MTU Discovery. Bloqueá-las causa falhas silenciosas de conexão com pacotes grandes.
+| Porta | Uso | Exposição |
+|---|---|---|
+| 51022/TCP | SSH administrativo | Pública |
+| 80/TCP | HTTP, redirecionamento e validação de certificado | Pública |
+| 443/TCP | HTTPS da API | Pública |
+| 8080/TCP | Aplicação Quarkus | Não deve ser acessível externamente |
+| 5432/TCP | PostgreSQL | Não exposta publicamente |
+| 22/TCP | SSH padrão | Fechada |
 
-### Estado final (porta 51022 liberada, porta 22 fechada, em todas as camadas)
+## Observações aprendidas
 
-```bash
-# ufw
-sudo ufw allow 51022/tcp
-sudo ufw delete allow 22/tcp
-sudo ufw enable
-sudo ufw status verbose
-
-# iptables hardcoded — editar manualmente /etc/iptables/rules.v4
-# adicionar (antes da linha REJECT):
-#   -A INPUT -p tcp -m state --state NEW -m tcp --dport 51022 -j ACCEPT
-# remover a linha equivalente da porta 22
-sudo nano /etc/iptables/rules.v4
-# testar ao vivo antes de persistir:
-sudo iptables -I INPUT <posição> -p tcp -m state --state NEW -m tcp --dport 51022 -j ACCEPT
-sudo iptables -D INPUT -p tcp -m state --state NEW -m tcp --dport 22 -j ACCEPT
-# confirmar que o arquivo bate com o estado ao vivo:
-sudo iptables-save | diff - /etc/iptables/rules.v4
-```
-
-Na Oracle: NSG e Security List — remover regra de entrada porta 22, manter/adicionar regra de entrada porta 51022 (CIDR `0.0.0.0/0`, TCP).
+- A ordem das regras de iptables importa.
+- As permissões necessárias devem estar posicionadas antes do `REJECT` final.
+- Regras de ICMP necessárias ao Path MTU Discovery devem ser preservadas.
+- O bloqueio externo da porta 8080 foi validado a partir da máquina de desenvolvimento.
 
 ---
 
-## Camada 3 — Usuário não-root
+# Camada 3 - Usuário administrativo não-root
 
-- Usuário `marcelo`, criado via `adduser`, com `sudo`, autenticação por chave SSH (mesma chave ED25519 usada para acesso geral).
-- Verificações: `sudo whoami` (deve pedir senha local e retornar `root`), `groups marcelo` (deve incluir `sudo`).
+- Usuário administrativo `marcelo` criado na VPS.
+- Usuário incluído no grupo `sudo`.
+- Chave SSH configurada no diretório `~/.ssh`.
+- Permissões de arquivo e diretório ajustadas.
+- Operações diárias executadas com usuário não-root e elevação por `sudo` somente quando necessária.
 
 ---
 
-## Camada 4 — Docker
+# Camada 4 - Docker
 
-Instalado a partir do **repositório oficial da Docker Inc.** (não o pacote `docker.io` do Ubuntu), por ser mais atualizado.
+Docker instalado a partir do repositório oficial da Docker Inc., com os componentes:
+
+- Docker Engine.
+- Docker CLI.
+- containerd.
+- Docker Buildx.
+- Docker Compose Plugin.
+
+A instalação detecta automaticamente a arquitetura ARM64 da VPS.
+
+O usuário administrativo foi adicionado ao grupo `docker`. Essa decisão permite executar Docker sem `sudo`, reconhecendo que a participação nesse grupo equivale a privilégios elevados sobre o host.
+
+## Validações
 
 ```bash
-for pkg in docker.io docker-doc docker-compose podman-docker containerd runc; do sudo apt remove $pkg; done
-
-sudo apt update
-sudo apt install ca-certificates curl -y
-sudo install -m 0755 -d /etc/apt/keyrings
-sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-sudo chmod a+r /etc/apt/keyrings/docker.asc
-
-echo \
-  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-
-sudo apt update
-sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-```
-
-O comando de repositório detecta automaticamente a arquitetura (`arm64` nesta VPS) via `dpkg --print-architecture` — não fixar `amd64` manualmente.
-
-**Rodar Docker sem `sudo`** (decisão consciente, equivalente a acesso root — aceito por ser o único operador da máquina):
-```bash
-sudo usermod -aG docker marcelo
-# necessário novo login (ou `newgrp docker`) para ter efeito
-```
-
-Verificação:
-```bash
-docker run hello-world
 docker --version
 docker compose version
+docker run hello-world
 ```
 
 ---
 
-## Camada 5 — Postgres em container
+# Camada 5 - PostgreSQL em container
 
-### Decisões de arquitetura
+## Decisões de arquitetura
 
-- **Volume:** *named volume* do Docker (não bind mount) — padrão recomendado, e como único operador da VPS não há ganho real em customizar o caminho manualmente.
-- **Usuário do banco:** dois usuários separados dentro do Postgres:
-  - `POSTGRES_ADMIN_USER` (superusuário, criado automaticamente pela imagem via `POSTGRES_USER`/`POSTGRES_PASSWORD`) — usado só para administração/manutenção.
-  - `APP_DB_USER` (usuário de aplicação, criado via script de inicialização, dono do banco `biblioteca_api`, **sem** privilégios de superusuário) — usado pela API no dia a dia. Princípio de *least privilege*: se a aplicação for comprometida, o dano fica limitado ao que esse usuário pode fazer.
-  - **Pendência registrada para a Fase 2:** ao introduzir Flyway, separar ainda mais em usuário de *migração* (com DDL) e usuário de *runtime* (só CRUD).
-- **Credenciais:** nunca em texto puro no `docker-compose.yml` — usar arquivo `.env` (nunca commitado) + `.env.example` (commitado, com placeholders).
+- Imagem: PostgreSQL 16.4.
+- Persistência: volume nomeado do Docker.
+- Banco: `biblioteca_api`.
+- Usuário administrativo separado do usuário utilizado pela aplicação.
+- Credenciais fornecidas por arquivo `.env`, não embutidas no Compose.
+- PostgreSQL sem publicação da porta 5432 na VPS.
+- Healthcheck com `pg_isready`.
 
-### Estrutura de arquivos
+## Papéis do banco
 
-```
-projeto/
-├── local/
-│   ├── docker-compose.yml   (com porta 5432 exposta — API roda fora do Docker localmente)
-│   ├── .env
-│   ├── .env.example
-│   └── init/
-│       └── 01-create-app-user.sh
-├── vps/
-│   ├── docker-compose.yml   (sem porta exposta — API e Postgres no mesmo compose)
-│   ├── .env
-│   ├── .env.example
-│   └── init/
-│       └── 01-create-app-user.sh
-```
+- `POSTGRES_ADMIN_USER`: administração e inicialização.
+- `APP_DB_USER`: usuário usado pela Biblioteca API.
 
-`.gitignore` (na raiz do projeto):
-```
-# Environment files (local, vps, etc.) — never commit
-**/.env
-```
+O usuário da aplicação não é superusuário. Na Fase 2, com a introdução do Flyway, está prevista a separação adicional entre usuário de migração e usuário de runtime.
 
-### `docker-compose.yml` (versão local, com porta exposta)
+## Inicialização
 
-```yaml
-services:
-  postgres:
-    image: postgres:16.4
-    container_name: biblioteca_api_postgres
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
-      APP_DB_USER: ${APP_DB_USER}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
-    ports:
-      - "5432:5432"
-    volumes:
-      - ./init:/docker-entrypoint-initdb.d:ro
-      - biblioteca_api_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_ADMIN_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+O script `init/01-create-app-user.sh` cria a role da aplicação, altera o proprietário do banco já criado pela imagem oficial do PostgreSQL e concede acesso ao schema `public`.
 
-volumes:
-  biblioteca_api_data:
-```
+Ponto importante: scripts em `/docker-entrypoint-initdb.d` são executados somente na primeira inicialização de um volume vazio.
 
-Na versão da VPS (Camada 6, a integrar): remover o bloco `ports` — comunicação interna entre containers acontece pelo nome do serviço (`postgres:5432`) via rede interna automática do Compose, sem necessidade de expor porta ao host.
+## Validações concluídas
 
-### `.env` / `.env.example`
+- Role da aplicação criada.
+- Banco atribuído ao proprietário esperado.
+- API autenticada com o usuário da aplicação.
+- Persistência confirmada após reinicialização dos containers sem remoção do volume.
 
-```
-# .env (nunca commitado)
-POSTGRES_DB=biblioteca_api
-POSTGRES_ADMIN_USER=bibliotecario.admin
-POSTGRES_ADMIN_PASSWORD=<gerado com: openssl rand -base64 24>
-APP_DB_USER=biblioteca_app
-APP_DB_PASSWORD=<gerado com: openssl rand -base64 24, diferente da anterior>
-```
+---
 
-```
-# .env.example (commitado)
-POSTGRES_DB=biblioteca_api
-POSTGRES_ADMIN_USER=troque_aqui
-POSTGRES_ADMIN_PASSWORD=troque_aqui
-APP_DB_USER=troque_aqui
-APP_DB_PASSWORD=troque_aqui
-```
+# Camada 6 - API Quarkus em container
 
-**Nunca reutilizar a mesma senha entre ambiente local e produção, nem entre usuário admin e usuário de aplicação.**
+## Status
 
-### Script de inicialização (`init/01-create-app-user.sh`)
+**Concluída e validada na Oracle Cloud VPS.**
 
-```bash
-#!/bin/bash
-set -e
+A aplicação Quarkus está executando em container juntamente com o PostgreSQL, sob gerenciamento do Docker Compose.
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
-    CREATE ROLE ${APP_DB_USER} WITH LOGIN PASSWORD '${APP_DB_PASSWORD}';
-    ALTER DATABASE ${POSTGRES_DB} OWNER TO ${APP_DB_USER};
-EOSQL
+## Build e runtime
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    GRANT ALL PRIVILEGES ON SCHEMA public TO ${APP_DB_USER};
-EOSQL
-```
+- Java de compilação: Java 21.
+- Runtime do container: Java 21.
+- Arquitetura da imagem: ARM64.
+- Imagem utilizada na VPS: `biblioteca-api:arm64`.
+- Perfil Quarkus: `prod`.
 
-**Pontos de atenção aprendidos na prática:**
-- A imagem oficial do Postgres **já cria o banco automaticamente** (via `POSTGRES_DB`) antes de qualquer script em `docker-entrypoint-initdb.d/` rodar — por isso o script usa `ALTER DATABASE ... OWNER TO`, não `CREATE DATABASE`.
-- `set -e` interrompe o script inteiro no primeiro erro — um `CREATE DATABASE` falhando (banco já existente) pode impedir que o `GRANT` seguinte seja executado, deixando o usuário de aplicação sem privilégios, sem aviso claro.
-- Scripts de init só rodam quando o **volume está vazio** (primeira inicialização). Para reprocessar após corrigir o script: `docker compose down -v` (remove o volume) antes de subir de novo.
-- Dar permissão de execução ao script: `chmod +x init/01-create-app-user.sh` — sem isso, é ignorado silenciosamente.
-- Se o diretório `init/` for criado automaticamente pelo Docker (bind mount para pasta inexistente), ele nasce com dono `root:root`. Prefira criar a pasta manualmente antes (`mkdir -p init`) para que fique com o dono correto (seu usuário).
+A imagem ARM64 foi empacotada e disponibilizada para execução na VPS. O arquivo `biblioteca-api-arm64.tar` representa o artefato de transporte da imagem utilizado no processo de implantação.
 
-### `application.properties` com perfis (dev/prod)
+## Configuração da aplicação
+
+O perfil de produção conecta ao PostgreSQL pelo nome do serviço Docker:
 
 ```properties
-# ---------- Comum a todos os ambientes ----------
-quarkus.datasource.db-kind=postgresql
-quarkus.datasource.username=${APP_DB_USER}
-quarkus.datasource.password=${APP_DB_PASSWORD}
-quarkus.hibernate-orm.log.sql=true
-quarkus.rest.path=/api
-
-# ---------- Perfil dev (ambiente local) ----------
-%dev.quarkus.datasource.jdbc.url=jdbc:postgresql://localhost:5432/biblioteca_api
-%dev.quarkus.hibernate-orm.database.generation=update
-
-# ---------- Perfil prod (VPS) ----------
 %prod.quarkus.datasource.jdbc.url=jdbc:postgresql://postgres:5432/biblioteca_api
 %prod.quarkus.hibernate-orm.database.generation=update
 ```
 
-**Pendência registrada:** `database.generation=update` em produção é um risco aceito conscientemente para a v1.0 (qualquer deploy pode alterar o schema real automaticamente). Revisar na Fase 2, junto com a introdução do Flyway — trocar para `validate` em produção e deixar migrations explícitas cuidarem de mudanças de schema.
+As credenciais são recebidas pelas variáveis:
 
-### Executando localmente
+```text
+APP_DB_USER
+APP_DB_PASSWORD
+```
 
-O Quarkus **não lê `.env` automaticamente** como o Docker Compose lê — é necessário carregar as variáveis no shell antes de rodar o Maven:
+## SQL logging
+O SQL logging do Hibernate é configurado por perfil:
+
+´´´.properties
+%dev.quarkus.hibernate-orm.log.sql=true
+%test.quarkus.hibernate-orm.log.sql=false
+%prod.quarkus.hibernate-orm.log.sql=false
+´´´
+
+## Docker Compose da VPS
+
+O Compose contém dois serviços:
+
+1. `postgres`, responsável pelo banco de dados.
+2. `biblioteca-api`, responsável pela aplicação Quarkus.
+
+A API só inicia após o healthcheck do PostgreSQL indicar que o banco está saudável.
+
+## Validações executadas
+
+- Inicialização dos dois containers.
+- Conexão da API com o PostgreSQL.
+- CRUD de Proprietário.
+- CRUD de Livro.
+- Consultas por categoria e proprietário.
+- Cenários de erro previstos nos testes manuais.
+- Persistência de dados após parada e reinicialização dos serviços sem `-v`.
+- Execução da API na arquitetura ARM64 da Oracle Cloud.
+
+## Resultado
+
+A Camada 6 está concluída. A API e o banco iniciam na VPS, comunicam-se pela rede interna do Compose, respondem aos endpoints e preservam os dados no volume do PostgreSQL.
+
+---
+
+# Camada 7 - Domínio, proxy reverso e HTTPS
+
+## Status
+
+**Concluída e validada.**
+
+Foram configurados:
+
+- domínio próprio;
+- DNS;
+- proxy reverso;
+- HTTPS;
+- acesso público à API;
+- bloqueio do acesso externo direto à porta 8080.
+
+## Endereço público
+
+```text
+https://api.marcelocarvalho.dev.br/api
+```
+
+O subdomínio `api` foi utilizado para a API, preservando o domínio raiz para um possível frontend futuro.
+
+## Arquitetura de produção
+
+```text
+Cliente externo
+      |
+      | HTTPS :443
+      v
+api.marcelocarvalho.dev.br
+      |
+      v
+Nginx na VPS
+      |
+      | proxy reverso
+      v
+Biblioteca API em container
+      |
+      | rede interna do Docker Compose
+      v
+PostgreSQL em container
+```
+
+## DNS
+
+- Domínio gerenciado no Registro.br.
+- DNS configurado para direcionar o subdomínio `api` ao endereço público da VPS.
+- Resolução do domínio confirmada durante a implantação.
+
+## Nginx
+
+O Nginx atua como ponto público da aplicação e encaminha as requisições para a API Quarkus.
+
+Funções exercidas:
+
+- atendimento nas portas 80 e 443;
+- redirecionamento de HTTP para HTTPS;
+- terminação TLS;
+- proxy reverso para a API;
+- registro de acessos e erros.
+
+## HTTPS
+
+- HTTPS configurado para `api.marcelocarvalho.dev.br`.
+- Certificado válido configurado no Nginx.
+- Endpoint público testado por HTTPS.
+
+## Validações executadas em 14/10/2026
+
+- Acesso externo direto pela porta 8080 expirou, confirmando que a aplicação não estava acessível externamente por essa porta.
+- `GET /api/livros` respondeu `200 OK` pelo domínio HTTPS.
+- Três proprietários fictícios foram cadastrados pela API pública.
+- Três livros fictícios foram cadastrados após correção do nome do campo `anoDePublicacao` no payload.
+- Consultas de proprietários e livros confirmaram os registros persistidos.
+- Foram usados apenas dados fictícios.
+
+## Observação funcional identificada
+
+Durante a validação pública, um payload usou `anoPublicacao` em vez de `anoDePublicacao`. O banco recebeu valor nulo para a coluna correspondente e a API retornou erro 500. Após a correção do nome do campo, o cadastro foi concluído.
+
+Esse comportamento deve ser tratado como dívida técnica: payload sem `anoDePublicacao` deve ser rejeitado pela validação da API com resposta 400 antes de alcançar a persistência.
+
+## Segurança atual
+
+- Porta 5432 não exposta publicamente.
+- Porta 8080 bloqueada para acesso externo direto.
+- Tráfego público destinado à API passa pelo Nginx e por HTTPS.
+- SSH permanece na porta 51022 com autenticação por chave.
+- A API ainda não possui autenticação e autorização. JWT e autorização por roles permanecem planejados para a Fase 3.
+
+## Resultado
+
+A Camada 7 está concluída: a API está publicada no domínio próprio, responde por HTTPS através do Nginx e não aceita acesso externo direto pela porta 8080.
+
+---
+
+# Configuração atual dos ambientes
+
+## Desenvolvimento local
+
+- PostgreSQL executado pelo Compose local.
+- Porta 5432 publicada para a aplicação executada fora do Docker.
+- API iniciada por Maven/Quarkus Dev.
+- Variáveis de ambiente carregadas no shell antes do Maven.
+
+## Produção
+
+- PostgreSQL e API executados no Docker Compose da VPS.
+- PostgreSQL sem porta pública.
+- API executada com perfil `prod`.
+- Nginx como proxy reverso.
+- HTTPS no domínio público.
+- Persistência em volume nomeado do Docker.
+
+---
+
+# Operação e verificações
+
+## Containers
 
 ```bash
+docker compose ps
+docker compose logs --tail 100 postgres
+docker compose logs --tail 100 biblioteca-api
+```
+
+## API interna na VPS
+
+```bash
+curl -i http://127.0.0.1:8080/api/proprietarios
+curl -i http://127.0.0.1:8080/api/livros
+```
+
+## API pública
+
+```bash
+curl -i https://api.marcelocarvalho.dev.br/api/proprietarios
+curl -i https://api.marcelocarvalho.dev.br/api/livros
+```
+
+## Nginx
+
+```bash
+sudo nginx -t
+sudo systemctl status nginx --no-pager
+sudo tail -n 100 /var/log/nginx/biblioteca-api.access.log
+sudo tail -n 100 /var/log/nginx/biblioteca-api.error.log
+```
+
+## Persistência
+
+Para testar persistência, reiniciar os serviços sem remover volumes:
+
+```bash
+docker compose down
 docker compose up -d
-docker compose logs -f postgres   # confirmar CREATE ROLE / ALTER DATABASE / GRANT sem erros
-
-set -a
-source .env
-set +a
-./mvnw quarkus:dev
 ```
 
-Verificação manual do banco (usar nome literal do usuário, já que variáveis do `.env` não existem automaticamente no shell do host):
-```bash
-docker compose exec postgres psql -U bibliotecario.admin -d postgres -c "\du"
-docker compose exec postgres psql -U bibliotecario.admin -d postgres -c "\l"
-```
-Confirmar: role `biblioteca_app` existe sem atributos de superusuário; banco `biblioteca_api` tem `biblioteca_app` como Owner.
-
-**Status:** PostgreSQL em container validado localmente e integrado à API containerizada pelo Docker Compose da VPS. A conexão entre os containers, os testes manuais da API e a persistência após reiniciar os serviços foram confirmados. A configuração e a execução na Oracle Cloud VPS ainda precisam ser verificadas.
+Não utilizar `docker compose down -v` em produção, pois a opção `-v` remove o volume nomeado do banco.
 
 ---
 
-## Decisões de arquitetura de front-end (registrado, sem ação pendente)
+# Pendências atuais e próximas fases
 
-- Front-end futuro (Fase 4) provavelmente será um SPA (React/Vue) compilado como arquivos estáticos, servido por Nginx dentro de um container — não um processo Node.js contínuo (SSR).
-- A mesma peça de infraestrutura Nginx planejada para a Camada 7 (reverse proxy da API) poderá futuramente também servir os arquivos estáticos do front, sem retrabalho.
+As atividades abaixo não impedem a conclusão das Camadas 6 e 7. Elas pertencem à evolução funcional e ao hardening posterior.
+
+## Prioridade imediata
+
+- Desabilitar ou restringir `quarkus.hibernate-orm.log.sql=true` no perfil de produção, agora que a API está publicamente exposta.
+- Garantir que a publicação da porta 8080 no Compose fique limitada ao necessário para o Nginx, preferencialmente vinculada ao loopback do host.
+- Tratar payload sem `anoDePublicacao` como erro 400 em vez de permitir falha de persistência com 500.
+- Confirmar e documentar a renovação automática do certificado HTTPS.
+
+## Fase 2
+
+- Paginação nas listagens.
+- Categoria como enum.
+- Exceções customizadas e respostas de erro padronizadas.
+- Flyway para migrações de banco.
+- Troca de `database.generation=update` por `validate` em produção.
+- Usuários separados de migração e runtime no PostgreSQL.
+- Banco de testes isolado.
+- Melhor estrutura de logs.
+- Validação algorítmica de CPF.
+
+## Fase 3
+
+- Autenticação JWT.
+- Autorização por roles.
+- Monitoramento e métricas.
+- Cache e otimizações.
+
+## Fase 4
+
+- Frontend em React ou Vue.
+- Nginx servindo os arquivos estáticos e mantendo o proxy da API.
 
 ---
 
-## Camada 6 — Build e execução da API em container
+# Critérios finais confirmados
 
-### Validação local concluída
+## Camada 6
 
-A API Quarkus foi integrada ao Docker Compose da VPS e executada localmente junto com o PostgreSQL. Foram realizados os seguintes testes:
+- [x] API empacotada em imagem compatível com ARM64.
+- [x] Java 21 no build e no runtime.
+- [x] PostgreSQL e API executados em containers.
+- [x] API conecta ao banco pelo serviço `postgres`.
+- [x] Endpoints validados.
+- [x] Persistência validada após reinicialização.
+- [x] Execução validada na Oracle Cloud VPS.
 
-- Criação de proprietário e livro pela API containerizada.
-- Execução manual dos cenários definidos em `http/biblioteca.http`, com os resultados esperados.
-- Reinício dos serviços com `docker compose down` e `docker compose up -d`, sem a opção `-v`.
-- Consulta dos registros após o reinício, confirmando que os dados permaneceram no volume do PostgreSQL.
+## Camada 7
 
-O teste confirmou a comunicação entre a API e o banco no Docker Compose e a persistência dos dados após a recriação dos containers, sem remover o volume.
-
-### Estado e trabalho restante
-
-A validação acima foi feita no ambiente local. Para considerar a Camada 6 concluída no contexto do deploy, ainda é necessário executar e verificar o mesmo conjunto essencial na Oracle Cloud VPS: construir ou disponibilizar a imagem compatível com a arquitetura da instância, iniciar os serviços, confirmar a conexão da API com o PostgreSQL e validar a persistência após reinício.
-
-A exposição pública por domínio, reverse proxy e TLS pertence à Camada 7 e permanece pendente.
+- [x] Domínio configurado.
+- [x] DNS apontando para a VPS.
+- [x] Nginx configurado como proxy reverso.
+- [x] HTTPS configurado.
+- [x] API acessível em `api.marcelocarvalho.dev.br`.
+- [x] Porta 8080 inacessível externamente.
+- [x] Leituras e escritas testadas pela URL pública.
+- [x] Persistência confirmada.
 
 ---
 
-## Pendências gerais para as próximas sessões
+# Conclusão
 
-1. **Camada 6 na VPS:** aplicar na Oracle Cloud a configuração já validada localmente; confirmar arquitetura da imagem, variáveis de ambiente, conexão entre containers, endpoints e persistência após reinício.
-2. **Camada 7:** configurar reverse proxy (Nginx), HTTPS via Let's Encrypt e o domínio `marcelocarvalho.dev.br`, com o DNS apontando para o IP público da VPS.
-3. Revisar `hibernate-orm.database.generation` em produção ao introduzir Flyway (Fase 2).
+O ciclo de infraestrutura planejado para a versão inicial está concluído. A Biblioteca API está compilada com Java 21, executa em container ARM64 na Oracle Cloud, utiliza PostgreSQL persistente em container e está publicada por domínio próprio através do Nginx com HTTPS.
 
-> Pendências de regras de negócio e cobertura de testes (exclusão de proprietário
-> com livros associados, testes automatizados) são acompanhadas em `HISTORY.md`
-> e `FASES.md`, para evitar duplicidade de registro entre este documento e os
-> demais.
+As próximas atividades deixam de ser implantação básica e passam a ser evolução de produto, qualidade, observabilidade, migração de banco e segurança da API.
 
 [Voltar ao README](../README.md)

@@ -1,117 +1,148 @@
-# 📅 Fases de Desenvolvimento
+# Fases de Desenvolvimento
 
-## Visão Geral
+## Visao Geral
 
-O projeto será desenvolvido de forma incremental, com releases versionadas. Cada fase adiciona funcionalidades e melhora a qualidade do código.
+O projeto evolui de forma incremental, com releases versionadas. Cada fase consolida um conjunto de entregas antes de avancar para melhorias funcionais, seguranca e frontend.
 
----
+## Fase 1: MVP (v1.0.0)
 
-## ✅ Fase 1: MVP (v1.0.0)
+**Status: Concluida**
 
-**Status:** Em desenvolvimento
+**Objetivo:** entregar o CRUD basico da Biblioteca API com arquitetura em camadas, regras essenciais de negocio, testes, documentacao e implantacao funcional em producao.
 
-**Objetivo:** Implementar o CRUD básico com arquitetura em camadas e regras essenciais de negócio.
+### Funcionalidades concluidas
 
-### Funcionalidades
+- Estrutura do projeto Quarkus.
+- Entidade `Proprietario`, com ID, nome e CPF como chave de negocio.
+- Entidade `Livro`, com ID, titulo, autor, categoria, ano de publicacao e proprietario.
+- Repositories com Panache.
+- Services centralizando logica e regras de negocio.
+- CPF imutavel depois do cadastro, com DTO especifico para atualizacao do proprietario.
+- CRUD REST de Proprietario:
+  - `POST /api/proprietarios`
+  - `GET /api/proprietarios`
+  - `GET /api/proprietarios/{id}`
+  - `PUT /api/proprietarios/{id}`
+  - `DELETE /api/proprietarios/{id}`
+- CRUD REST de Livro:
+  - `POST /api/livros`
+  - `GET /api/livros`
+  - `GET /api/livros/{id}`
+  - `GET /api/livros/categoria/{categoria}`
+  - `GET /api/livros/proprietario/{proprietarioId}`
+  - `PUT /api/livros/{id}`
+  - `DELETE /api/livros/{id}`
+- Validacoes basicas com Bean Validation.
+- Tratamento dos principais cenarios HTTP de negocio.
+- Testes de entidade, service e integracao de controllers.
+- Cobertura de testes superior ao objetivo inicial de 70%, com 93% registrado na conclusao do MVP.
+- Swagger UI/OpenAPI.
+- PostgreSQL em Docker Compose para desenvolvimento e producao.
+- API Quarkus containerizada para arquitetura ARM64.
+- Deploy concluido na Oracle Cloud VPS.
+- PostgreSQL e API executando em containers na VPS.
+- Persistencia validada apos reinicializacao dos containers.
+- Nginx configurado como proxy reverso.
+- Dominio e HTTPS configurados.
+- API publicada em `https://api.marcelocarvalho.dev.br/api`.
+- Porta da aplicacao restrita ao loopback da VPS por `127.0.0.1:8080:8080`.
 
-- [x] Estrutura do projeto Quarkus
-- [x] Entidade `Proprietario` (Id, Nome, CPF como Chave de Negócio)
-- [x] Entidade `Livro` (Id, Título, Autor, Categoria, Ano, Proprietário)
-- [x] Repository com Panache para entidades
-- [x] Service com lógica de negócio (CPF imutável após cadastro, sem alteração via atualização)
-- [x] Controller REST para Proprietário com endpoints:
-  - `POST /api/proprietarios` — Criar proprietário
-  - `GET /api/proprietarios` — Listar todos
-  - `GET /api/proprietarios/{id}` — Buscar por ID
-  - `PUT /api/proprietarios/{id}` — Atualizar
-  - `DELETE /api/proprietarios/{id}` — Deletar
-- [x] Controller REST para Livros:
-  - `POST /api/livros` — Criar livro
-  - `GET /api/livros` — Listar todos
-  - `GET /api/livros/{id}` — Buscar por ID
-  - `GET /api/livros/categoria/{categoria}` — Buscar por categoria
-  - `GET /api/livros/proprietario/{proprietarioId}` — Buscar por proprietário
-  - `PUT /api/livros/{id}` — Atualizar
-  - `DELETE /api/livros/{id}` — Deletar
-- [x] Validações de formato básicas via Bean Validation (`@NotBlank`, `@Size`, `@Pattern`)
-- [x] Tratamento de erros de negócio e concorrência (400, 404, 409, 500)
-- [~] Testes unitários (70% cobertura) — alcançado 93%:
-  - [x] Testes de entidade (`ProprietarioTest`, `LivroTest`, `YearAttributeConverterTest`)
-  - [x] Testes de integração do `LivroController` (`LivroControllerTest`, incluindo inclusão, atualização e exclusão)
-  - [x] Testes de integração do `ProprietarioController` (`ProprietarioController`, incluindo inclusão, atualização e exclusão)
-  - [x] Testes unitários do `LivroService` com mocks. 
-  - [x] Teste do cenário "lista vazia" em `listAllLivros` (escolhido teste simples sem banco de teste isolado)
-- [x] Documentação Swagger UI
-- [x] Containerização do banco de dados (Postgres via Docker Compose, local e produção)
-- [ ] Deploy em VPS Oracle Cloud (camadas 0 a 5 concluídas; containerização da API e exposição à internet pendentes)
+### Arquitetura consolidada do MVP
 
-### Arquitetura
-controller/ → service/ → repository/ → banco de dados
+```text
+Cliente HTTP/HTTPS
+       |
+       v
+Nginx (producao)
+       |
+       v
+Controller -> Service -> Repository -> PostgreSQL
+```
 
-### Pendências conhecidas da Fase 1
+### Entregaveis da Fase 1
 
-- Revisar uso de path param versus query param na busca de livro por categoria (segmento de rota vazio retorna `404` em vez de alcançar o método).
-- Implementar regra de bloqueio de exclusão de proprietário com livros associados (RN07), evitando erro `500` cru.
-- Isolar o banco de dados usado pelos testes automatizados do banco usado manualmente em desenvolvimento deixado para proxima fase.
+- Codigo-fonte versionado.
+- README e documentacao tecnica do projeto.
+- Swagger/OpenAPI.
+- Suite automatizada de testes.
+- Docker Compose para os ambientes local e VPS.
+- API em execucao na Oracle Cloud VPS.
+- Dominio proprio e acesso HTTPS.
 
-### Entregáveis
+### Encerramento da Fase 1
 
-- Código-fonte versionado no GitHub
-- README com instruções de setup
-- Documentação Swagger automática
-- Testes com cobertura mínima de 70% (93% alcançado)
-- API rodando em produção na VPS
-
----
-
-## 🔄 Fase 2: Melhorias (v1.1.0)
-
-**Status:** Planejado
-
-**Objetivo:** Refinar funcionalidades, elevar o rigor das validações e adicionar recursos de produção.
-
-### Funcionalidades Previstas
-
-- [ ] Integrar validação algorítmica de CPF (verificação de dígitos verificadores via anotação `@CPF` ou integração com API externa de validação)
-- [ ] Paginação nas listagens
-- [ ] Transformar o campo categoria do livro em um Enum
-- [ ] Melhor tratamento de exceções customizadas
-- [ ] Testes de integração adicionais
-- [ ] Flyway para versionamento do banco (incluindo separação de usuário de migração e usuário de runtime no Postgres)
-- [ ] Revisar `quarkus.hibernate-orm.database.generation` em produção (trocar `update` por `validate`, com migrations explícitas via Flyway)
-- [ ] Melhor estrutura de logs
-- [ ] DTOs mais robustos
+A Fase 1 e considerada concluida com o MVP funcional e implantado. Os requisitos que ainda precisam de refinamento ou implementacao deixam de bloquear a v1.0.0 e passam formalmente para a Fase 2.
 
 ---
 
-## 🔐 Fase 3: Segurança e Performance (v1.2.0)
+## Fase 2: Melhorias funcionais, qualidade e producao (v1.1.0)
 
-**Status:** Planejado
+**Status: Planejada**
 
-**Objetivo:** Adicionar segurança e otimizações.
+**Objetivo:** resolver as dividas funcionais deixadas conscientemente fora do MVP, tornar os contratos e erros da API mais robustos e amadurecer persistencia, testes e operacao em producao.
 
-### Funcionalidades Previstas
+### Requisitos funcionais transferidos da Fase 1
 
-- [ ] Autenticação com JWT
-- [ ] Autorização por roles
-- [ ] Cache estratégico
-- [ ] Otimizações de query (índices, lazy loading)
-- [ ] Monitoramento e métricas
+- Implementar a RN07: impedir a exclusao de proprietario que ainda possua livros associados, retornando resposta controlada em vez de erro interno.
+- Revisar a busca de livros por categoria quanto ao uso de path parameter versus query parameter, incluindo o comportamento quando a categoria nao e informada.
+- Isolar o banco utilizado pelos testes automatizados do banco utilizado manualmente no ambiente de desenvolvimento.
+
+### Melhorias funcionais ja planejadas
+
+- Integrar validacao algoritmica do CPF, alem da validacao sintatica atualmente existente.
+- Implementar paginacao nas listagens.
+- Transformar `categoria` de Livro em enum.
+- Melhorar o tratamento de excecoes com respostas de erro padronizadas/customizadas.
+- Garantir que payloads invalidos sejam rejeitados antes da persistencia, incluindo ausencia ou nome incorreto de `anoDePublicacao`.
+- Tornar DTOs e contratos REST mais robustos.
+
+### Persistencia e banco de dados
+
+- Introduzir Flyway para versionamento do schema.
+- Separar usuario de migracao e usuario de runtime no PostgreSQL.
+- Trocar `%prod.quarkus.hibernate-orm.database.generation=update` por `validate` quando as migrations estiverem estabelecidas.
+- Ampliar os testes de integracao relacionados a persistencia e regras de negocio.
+
+### Operacao e observabilidade
+
+- Melhorar a estrutura dos logs da aplicacao.
+- Manter documentadas as configuracoes operacionais da VPS, Docker, Nginx e HTTPS.
+
+### Resultado esperado
+
+Ao final da Fase 2, a API deve manter as funcionalidades do MVP, mas com regras pendentes resolvidas, contratos HTTP mais previsiveis, banco versionado por migrations e uma separacao mais segura entre ambientes de desenvolvimento, teste e producao.
 
 ---
 
-## 🎯 Fase 4: Frontend (v2.0.0)
+## Fase 3: Seguranca e Performance (v1.2.0)
 
-**Status:** Planejado
+**Status: Planejada**
 
-**Objetivo:** Interface web para consumir a API.
+**Objetivo:** adicionar autenticacao, autorizacao, observabilidade e otimizacoes apropriadas para a evolucao da API publica.
 
-### Funcionalidades Previstas
+### Funcionalidades previstas
 
-- [ ] Frontend em React ou Vue.js
-- [ ] Integração com API
-- [ ] Interface responsiva
-- [ ] Deploy junto com backend (reverse proxy Nginx servindo também os arquivos estáticos)
+- Autenticacao com JWT.
+- Autorizacao por roles.
+- Cache estrategico.
+- Otimizacoes de query, incluindo avaliacao de indices e carregamento de relacionamentos.
+- Monitoramento e metricas.
+
+---
+
+## Fase 4: Frontend (v2.0.0)
+
+**Status: Planejada**
+
+**Objetivo:** criar uma interface web para consumir a Biblioteca API.
+
+### Funcionalidades previstas
+
+- Frontend em React ou Vue.js.
+- Integracao com a API.
+- Interface responsiva.
+- Definicao de CORS de acordo com o cliente web adotado.
+- Deploy integrado a infraestrutura existente, aproveitando o Nginx para o frontend e o proxy da API.
 
 ---
 

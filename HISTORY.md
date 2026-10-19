@@ -771,6 +771,73 @@ Após configurar o domínio da API com HTTPS e o Nginx como proxy reverso, foi n
 A validação confirma o bloqueio do acesso externo direto à porta 8080 e o funcionamento do acesso HTTPS pelo Nginx. A API continua publicamente acessível pelo domínio; autenticação e autorização permanecem planejadas para a Fase 3. Foram usados somente dados fictícios.
 
 ---
+### 2026-10-14 - Decisão: SQL Logging separado por ambiente
+
+#### Contexto
+
+Durante a preparação da Biblioteca API para execução na VPS, o SQL logging do Hibernate permaneceu habilitado globalmente por meio da configuração:
+
+quarkus.hibernate-orm.log.sql=true
+
+Essa configuração foi útil durante o desenvolvimento e a validação inicial da aplicação, permitindo visualizar no log as instruções SQL geradas pelo Hibernate.
+
+Com a conclusão da exposição pública da API por domínio próprio e HTTPS, a necessidade dessa configuração foi reavaliada. O SQL logging não precisa permanecer habilitado no ambiente de produção, enquanto continua sendo útil durante o desenvolvimento local.
+
+#### Decisão
+
+A configuração global de SQL logging foi removida e substituída por configurações específicas para cada perfil do Quarkus:
+´´´ .properties
+%dev.quarkus.hibernate-orm.log.sql=true
+%test.quarkus.hibernate-orm.log.sql=false
+%prod.quarkus.hibernate-orm.log.sql=false
+
+´´´
+Dessa forma:
+
+desenvolvimento (dev) mantém o SQL logging habilitado para apoiar desenvolvimento, estudo e diagnóstico;
+testes (test) executam com SQL logging desabilitado;
+produção (prod) executa com SQL logging desabilitado.
+
+#### Justificativa
+
+A configuração anterior havia sido mantida temporariamente durante as etapas de desenvolvimento e implantação.
+
+Após a publicação da API, manter o SQL logging habilitado permanentemente em produção deixou de ser necessário. A separação por perfil preserva a utilidade do recurso durante o desenvolvimento sem carregar essa configuração de diagnóstico para o ambiente público.
+
+A alteração também torna explícito no application.properties o comportamento esperado de cada ambiente.
+
+#### Ação
+
+
+Atualizado src/main/resources/application.properties, removendo:
+
+´´´ .properties
+
+quarkus.hibernate-orm.log.sql=true
+
+´´´
+e adicionando:
+
+
+´´´ .properties
+
+%dev.quarkus.hibernate-orm.log.sql=true
+%test.quarkus.hibernate-orm.log.sql=false
+%prod.quarkus.hibernate-orm.log.sql=false
+
+´´´
+
+A estratégia de geração do schema não foi alterada nesta decisão:
+
+´´´ .properties
+
+%prod.quarkus.hibernate-orm.database.generation=update
+
+´´´
+A substituição dessa estratégia continua planejada para a Fase 2, em conjunto com a introdução do Flyway e migrations versionadas.
+
+
+---
 
 ## [v1.1.0] - Planejado
 
