@@ -83,7 +83,7 @@ A Fase 1 e considerada concluida com o MVP funcional e implantado. Os requisitos
 
 ### Requisitos funcionais transferidos da Fase 1
 
-- Implementar a RN07: impedir a exclusao de proprietario que ainda possua livros associados, retornando resposta controlada em vez de erro interno.
+- Implementar a RN08: impedir a exclusao de proprietario que ainda possua livros associados, retornando resposta controlada em vez de erro interno.
 - Revisar a busca de livros por categoria quanto ao uso de path parameter versus query parameter, incluindo o comportamento quando a categoria nao e informada.
 - Isolar o banco utilizado pelos testes automatizados do banco utilizado manualmente no ambiente de desenvolvimento.
 

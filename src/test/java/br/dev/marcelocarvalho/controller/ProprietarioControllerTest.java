@@ -93,6 +93,7 @@ class ProprietarioControllerTest {
                         400)
         );
     }
+
     static Stream<Arguments> cenariosAtualizarProprietarioValidacao() {
         return Stream.of(
                 Arguments.of("Nome ausente",

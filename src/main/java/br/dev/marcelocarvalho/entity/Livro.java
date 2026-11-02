@@ -36,7 +36,7 @@ public class Livro extends PanacheEntity {
     private Year anoDePublicacao;
 
     @NotNull(message = "Proprietário é obrigatório")
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "proprietario_id", nullable = false)
     private Proprietario proprietario;
 
