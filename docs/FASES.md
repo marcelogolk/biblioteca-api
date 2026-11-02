@@ -77,7 +77,7 @@ A Fase 1 e considerada concluida com o MVP funcional e implantado. Os requisitos
 
 ## Fase 2: Melhorias funcionais, qualidade e producao (v1.1.0)
 
-**Status: Planejada**
+**Status: Em desenvolvimento**
 
 **Objetivo:** resolver as dividas funcionais deixadas conscientemente fora do MVP, tornar os contratos e erros da API mais robustos e amadurecer persistencia, testes e operacao em producao.
 

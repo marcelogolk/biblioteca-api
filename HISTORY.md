@@ -839,7 +839,7 @@ A substituição dessa estratégia continua planejada para a Fase 2, em conjunto
 
 ---
 
-## [v1.1.0] - Planejado
+## [v1.1.0] - Em desenvolvimento
 
 - Melhorias em funcionalidades e tratamento de erros.
     - transformar o campo categoria do livro em um enum

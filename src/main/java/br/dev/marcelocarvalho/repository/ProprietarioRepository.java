@@ -6,4 +6,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class ProprietarioRepository implements PanacheRepository<Proprietario> {
+    public boolean existe(Long proprietarioId) {
+        return count("id", proprietarioId) > 0;
+    }
 }
