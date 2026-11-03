@@ -4,6 +4,7 @@ import br.dev.marcelocarvalho.dto.ProprietarioAtualizacaoDTO;
 import br.dev.marcelocarvalho.dto.ProprietarioDTO;
 import br.dev.marcelocarvalho.dto.ProprietarioInclusaoDTO;
 import br.dev.marcelocarvalho.entity.Proprietario;
+import br.dev.marcelocarvalho.repository.LivroRepository;
 import br.dev.marcelocarvalho.repository.ProprietarioRepository;
 import io.quarkus.hibernate.orm.panache.PanacheQuery;
 import io.quarkus.test.InjectMock;
@@ -26,6 +27,10 @@ class ProprietarioServiceTest {
 
     @InjectMock
     ProprietarioRepository proprietarioRepository;
+
+    @InjectMock
+    LivroRepository livroRepository;
+
 
     @Test
     void buscarProprietarioById_deveRetornarDTO_quandoIdExistente() {
@@ -117,8 +122,9 @@ class ProprietarioServiceTest {
     }
 
     @Test
-    void deletarProprietarioById_naoDeveLancarExcecao_quandoIdExistente() {
-        when(proprietarioRepository.deleteById(1L)).thenReturn(true);
+    void deletarProprietarioById_naoDeveLancarExcecao_quandoIdExistenteENãoTemLivro(){
+        when(proprietarioRepository.existe(1L)).thenReturn(true);
+        when(livroRepository.proprietarioTemLivros(1L)).thenReturn(false);
 
         assertDoesNotThrow(() -> proprietarioService.deletarProprietarioById(1L));
 
@@ -127,7 +133,7 @@ class ProprietarioServiceTest {
 
     @Test
     void deletarProprietarioById_deveLancar404_quandoIdInexistente() {
-        when(proprietarioRepository.deleteById(99L)).thenReturn(false);
+        when(proprietarioRepository.existe(99L)).thenReturn(false);
 
         WebApplicationException exception = assertThrows(
                 WebApplicationException.class,
@@ -135,6 +141,23 @@ class ProprietarioServiceTest {
         );
 
         assertEquals(404, exception.getResponse().getStatus());
+
+        verify(livroRepository, never()).proprietarioTemLivros(99L);
+        verify(proprietarioRepository, never()).deleteById(99L);
+    }
+
+    @Test
+    void deletarProprietarioById_deveLancar409_quandoExistirLivroAssociadoAoProprietarioId(){
+        when(proprietarioRepository.existe(1L)).thenReturn(true);
+        when(livroRepository.proprietarioTemLivros(1L)).thenReturn(true);
+
+        WebApplicationException exception = assertThrows(
+                WebApplicationException.class,
+                () -> proprietarioService.deletarProprietarioById(1L)
+        );
+        assertEquals(409, exception.getResponse().getStatus());
+
+        verify(proprietarioRepository, never()).deleteById(1L);
     }
 
     @Test

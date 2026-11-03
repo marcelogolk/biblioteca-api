@@ -7,11 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
-
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.*;
 
@@ -19,19 +18,32 @@ import static org.hamcrest.Matchers.*;
 class ProprietarioControllerTest {
 
     private final List<Long> proprietariosCriados = new ArrayList<>();
+    private final List<Long> livrosCriados = new ArrayList<>();
     private record ProprietarioCriado(Long id, String cpf) {}
+    private record LivroCriado(Long id, String uuid, String titulo, String autor, String categoria,
+                               Year anoDePublicacao, Long proprietarioId){}
     private static final String PLACEHOLDER_CPF = "__CPF__";
 
     @AfterEach
     void limparDados() {
+        for (Long livroId : livrosCriados) {
+            given().when().delete("/api/livros/{id}", livroId);
+        }
+        livrosCriados.clear();
+
         for (Long proprietarioId : proprietariosCriados) {
             given().when().delete("/api/proprietarios/{id}", proprietarioId);
         }
         proprietariosCriados.clear();
     }
 
+    private String gerarCpfUnico() {
+        String nanoStr = String.valueOf(System.nanoTime());
+        return nanoStr.substring(nanoStr.length() - 11);
+    }
+
     private ProprietarioCriado criarProprietario(String nome) {
-        String cpfUnico = String.valueOf(System.nanoTime()).substring(0, 11);
+        String cpfUnico = gerarCpfUnico();
 
         Long proprietarioId = given()
                 .contentType(ContentType.JSON)
@@ -46,6 +58,25 @@ class ProprietarioControllerTest {
 
         proprietariosCriados.add(proprietarioId);
         return new ProprietarioCriado(proprietarioId, cpfUnico);
+    }
+
+    private LivroCriado criarLivro(String titulo, String autor, String categoria, int ano, Long proprietarioId) {
+        var response = given()
+                .contentType(ContentType.JSON)
+                .body("""
+                        {"titulo": "%s", "autor": "%s", "categoria": "%s", "anoDePublicacao": %d, "proprietarioId": %d}
+                        """.formatted(titulo, autor, categoria, ano, proprietarioId))
+                .when()
+                .post("/api/livros")
+                .then()
+                .statusCode(201)
+                .extract().jsonPath();
+
+        Long livroId = response.getLong("id");
+        String uuid = response.getString("uuid");
+
+        livrosCriados.add(livroId);
+        return new LivroCriado(livroId, uuid, titulo, autor, categoria, Year.of(ano), proprietarioId);
     }
 
     static Stream<Arguments> cenariosIncluirProprietario() {
@@ -133,7 +164,7 @@ class ProprietarioControllerTest {
     @ParameterizedTest(name = "{0} -> {2}")
     @MethodSource("cenariosIncluirProprietario")
     void incluirProprietario_cenarios(String descricao, String corpoJsonComPlaceholder, int statusEsperado) {
-        String cpfUnico = String.valueOf(System.nanoTime()).substring(0, 11);
+        String cpfUnico = gerarCpfUnico();
         String corpoJson = corpoJsonComPlaceholder.replace(PLACEHOLDER_CPF, cpfUnico);
 
         var response = given()
@@ -270,4 +301,31 @@ class ProprietarioControllerTest {
                 .statusCode(404);
     }
 
+    @Test
+    void excluirProprietarioComLivros_deveRetornar409EConfirmarProprietarioENaoRemovido() {
+        ProprietarioCriado proprietario = criarProprietario("Proprietario Com Livro");
+        LivroCriado livro = criarLivro("Clean Code", "Robert C. Martin", "Tecnologia", 2008, proprietario.id());
+
+        given()
+                .when()
+                .delete("/api/proprietarios/{id}", proprietario.id())
+                .then()
+                .statusCode(409);
+
+        given()
+                .when()
+                .get("/api/proprietarios/{id}", proprietario.id())
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(proprietario.id().intValue()))
+                .body("nome", equalTo("Proprietario Com Livro"));
+
+        given()
+                .when()
+                .get("/api/livros/{id}", livro.id())
+                .then()
+                .statusCode(200)
+                .body("id", equalTo(livro.id().intValue()))
+                .body("proprietarioId", equalTo(proprietario.id().intValue()));
+    }
 }

@@ -11,7 +11,8 @@ public class LivroRepository implements PanacheRepository<Livro> {
     public List<Livro> findByCategoria(String categoria) {
         return list("categoria", categoria);
     }
-    public List<Livro> findByProprietarioId(Long proprietarioId){
-        return list("proprietario.id", proprietarioId);
+    public List<Livro> findByProprietarioId(Long proprietarioId){ return list("proprietario.id", proprietarioId); }
+    public boolean proprietarioTemLivros(Long id){
+        return count("proprietario.id", id) > 0;
     }
 }
