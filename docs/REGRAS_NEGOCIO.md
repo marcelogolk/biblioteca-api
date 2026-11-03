@@ -68,9 +68,7 @@ A atualização do proprietário deve respeitar as mesmas regras de obrigatoried
 
 Um proprietário que possua livros associados não deve ser excluído.
 
-Enquanto essa regra não estiver implementada pela aplicação, uma tentativa de exclusão pode ser impedida apenas pela integridade referencial do banco e resultar em resposta técnica inadequada. A implementação deverá verificar previamente a existência de livros e retornar uma resposta controlada ao cliente.
-
-**Estado:** planejada para a Fase 2; não implementada no MVP.
+**Estado:** vigente no MVP.
 
 ---
 

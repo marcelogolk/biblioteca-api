@@ -841,8 +841,121 @@ A substituição dessa estratégia continua planejada para a Fase 2, em conjunto
 
 ## [v1.1.0] - Em desenvolvimento
 
-- Melhorias em funcionalidades e tratamento de erros.
-    - transformar o campo categoria do livro em um enum
+### 2026-11-02 - Decisão: RN08 - Bloqueio de Exclusão de Proprietário com Livros Associados (Fase 2)
+
+#### Contexto
+
+Primeiro item da Fase 2 (v1.1.0). Até a Fase 1, `ProprietarioService.deletarProprietarioById`
+delegava a exclusão diretamente ao repositório (`deleteById`) e só distinguia
+"excluído" de "não encontrado". Não havia nenhuma verificação de livros associados:
+um proprietário com livros só seria barrado pela chave estrangeira do banco, o que
+resultaria em erro técnico em vez de uma resposta controlada da API.
+
+A regra de negócio já estava definida (um proprietário que possui livros não deve
+ser excluído), faltava a implementação e a decisão sobre o que acontece com os
+livros nesse cenário.
+
+#### Decisão
+
+1. **Proprietário com ao menos um livro associado não pode ser excluído.** A
+   verificação é feita no `ProprietarioService`, na seguinte ordem:
+  - proprietário não existe -> `404 Not Found`;
+  - proprietário existe e possui livros -> `409 Conflict`, sem alterar nenhum dado;
+  - proprietário existe e não possui livros -> exclusão e `204 No Content`.
+2. **Não há exclusão em cascata nem transferência automática de livros.** O
+   proprietário de um livro continua imutável (RN15). Transferir livros entre
+   proprietários seria uma funcionalidade própria, que exigiria revisar essa regra
+   e portanto uma nova decisão de domínio; fica fora do escopo desta entrega.
+3. **A chave estrangeira do PostgreSQL continua sendo a última garantia de
+   integridade.** A regra no Service dá uma resposta previsível ao cliente; o banco
+   protege os dados mesmo se algo escapar da verificação em Java.
+4. **Consultas explícitas, sem otimização prematura.** Foram criados
+   `ProprietarioRepository.existe(Long)` e `LivroRepository.proprietarioTemLivros(Long)`,
+   ambos usando `count(...)` do Panache. Não foi adotado `SELECT EXISTS` nativo nem
+   uma consulta única combinada; isso pode ser revisto se o volume de dados justificar.
+5. **Concorrência assumida, sem locks Java.** Entre a verificação e o `DELETE`, outra
+   requisição pode cadastrar um livro para o mesmo proprietário. Esse cenário não é
+   tratado com `synchronized` ou locking explícito; fica coberto pela chave
+   estrangeira.
+
+#### Justificativa
+
+- O Repository responde perguntas sobre dados ("existe?"), o Service decide a regra
+  ("então não pode excluir") e o Controller apenas traduz o resultado em HTTP. Isso
+  mantém o Controller fino e a regra de negócio em um só lugar.
+- Uma consulta de existência expressa a intenção melhor do que carregar a lista de
+  livros para checar se está vazia, e evita trazer registros desnecessários do banco.
+- Manter `count(...)` do Panache é coerente com o restante do projeto, que não usa
+  SQL nativo em nenhum repositório; a diferença de desempenho para `EXISTS` é
+  irrelevante na escala atual.
+- `synchronized` só controla threads de uma única JVM e não protegeria o estado
+  persistido caso a API passe a rodar em mais de uma instância; o recurso
+  compartilhado é o banco, e é nele que a garantia final deve estar.
+- Preferiu-se clareza e testabilidade a economizar uma consulta: cada motivo de
+  recusa (404 e 409) é distinguível e coberto por teste próprio.
+
+#### Ação
+
+- `ProprietarioRepository`: criado `existe(Long proprietarioId)`.
+- `LivroRepository`: criado `proprietarioTemLivros(Long id)`.
+- `ProprietarioService.deletarProprietarioById`: passa a verificar existência
+  (404), depois livros associados (409), e só então exclui.
+- `ProprietarioServiceTest` (unitário, repositórios mockados): cenários de
+  proprietário inexistente (com `verify(..., never())` para a consulta de livros e
+  para o `deleteById`), proprietário com livros (409, `deleteById` nunca chamado) e
+  proprietário sem livros (sem exceção, `deleteById` chamado).
+- `ProprietarioControllerTest` (integração): cenário de proprietário com livro
+  retorna 409 e confirma por `GET` que o proprietário e o livro continuam
+  existindo; a limpeza dos dados remove o livro antes do proprietário.
+- Não foi criado cenário separado para "vários livros": como basta um livro para
+  bloquear a exclusão, seria redundante.
+- Não foi criado `ProprietarioRepositoryTest`: a consulta real é coberta pelos testes
+  de integração do Controller.
+- Validação manual no Swagger (409 com livro associado, 204 após remover o livro,
+  404 para id inexistente). Suíte completa: 90 testes, 0 falhas.
+- Documentação: `REGRAS_NEGOCIO.md` atualizado com o estado da RN08.
+- **Pendências registradas:** a resposta do 409 hoje é texto puro, o que será
+  tratado no item de padronização de erros da Fase 2; uma violação da chave
+  estrangeira causada por concorrência ainda resulta em erro técnico, a ser
+  convertido em resposta controlada nesse mesmo item; transferência de livros entre
+  proprietários segue sem implementação.
+
+---
+### 2026-11-02 - Pendência: Aviso de Auto-attach do Mockito nos Testes
+
+#### Contexto
+
+Ao executar os testes com Mockito 5.21.0 (Quarkus 3.39.3, Java 21), o console
+exibe os seguintes avisos: o Mockito está se anexando sozinho à JVM para habilitar
+o *inline mock maker*; um agente Java foi carregado dinamicamente; e "Sharing is only
+supported for boot loader classes". Os testes passam, mas o aviso indica que o
+carregamento dinâmico de agentes será desabilitado por padrão em versões futuras do JDK.
+
+#### Decisão
+
+1. **Não corrigir agora; registrar como pendência de higiene.** O comportamento
+   atual funciona no JDK 21 e não bloqueia nenhuma entrega da Fase 2.
+2. **A correção será feita em commit separado**, configurando o Mockito como agente
+   Java do build, conforme a documentação oficial do Mockito, tanto no Maven
+   (Surefire) quanto nas opções de execução do IntelliJ, que não herdam a
+   configuração do Maven.
+
+#### Justificativa
+
+- Misturar essa mudança de infraestrutura de testes com a implementação de uma
+  regra de negócio dificultaria o diagnóstico caso algum teste passasse a falhar.
+- O risco é futuro (troca de versão do JDK), não atual; o custo de adiar é baixo,
+  desde que a pendência fique registrada e revisitada antes de qualquer upgrade.
+- Há um ponto de atenção conhecido: o projeto usa JaCoCo, e a configuração do agente
+  do Mockito no Surefire pode conflitar com argumentos de JVM já definidos para a
+  cobertura, o que deve ser verificado na implementação.
+
+#### Ação
+
+- Registrar a pendência (esta entrada) e referenciá-la no `FASES.md`.
+- Critério de pronto: `./mvnw verify` e a execução pelo IntelliJ sem os avisos de
+  auto-attach, com a cobertura do JaCoCo continuando a ser gerada.
+- Revisitar antes de qualquer atualização de versão do JDK.
 
 ---
 
