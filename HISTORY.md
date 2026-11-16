@@ -972,3 +972,56 @@ Frontend para consumir a API.
 ---
 
 **Última atualização:** 2026-09-14
+
+### 2026-11-16 - Ideia Futura: Geração de Relatórios em PDF com OpenPDF
+
+#### Contexto
+
+Durante os estudos de Java e a evolução da Biblioteca API, foi identificada a
+biblioteca **OpenPDF** (LibrePDF) como uma tecnologia interessante para aprofundar o
+estudo da geração de documentos PDF em aplicações Java.
+
+Como evolução futura da API, considerou-se uma funcionalidade experimental de
+geração de relatórios em PDF. Exemplos possíveis:
+
+- relatório do acervo de livros;
+- relatório de livros filtrados por categoria;
+- relatório de livros vinculados a determinado proprietário;
+- geração do documento a partir dos dados obtidos pelos serviços já existentes da API;
+- disponibilização do arquivo por um endpoint específico, retornando
+  `application/pdf`.
+
+#### Decisão
+
+1. **A ideia fica registrada apenas como possível evolução futura.** Não é requisito
+   de nenhuma das fases atuais da Biblioteca API e não será iniciada antes da
+   consolidação das funcionalidades já previstas.
+2. **O objetivo principal é o aprendizado:** estudar a geração de PDF em Java,
+   experimentar o OpenPDF em uma aplicação real e ganhar experiência na integração
+   de bibliotecas externas em um backend Java. A funcionalidade não deve ser
+   introduzida apenas para ampliar o escopo da API.
+3. **A responsabilidade arquitetural deve ser avaliada no momento da implementação.**
+   Gerar e apresentar relatórios não pertence necessariamente ao núcleo de negócio
+   do backend. O backend pode ser responsável por obter e organizar os dados e
+   aplicar as regras de negócio e, conforme a arquitetura adotada, disponibilizar
+   ou gerar o documento.
+
+#### Justificativa
+
+- Registrar a ideia agora preserva o raciocínio original (por que interessa, o que
+  se quer aprender e com que ressalva arquitetural) sem comprometer o escopo atual.
+- Tratar a funcionalidade como exercício de arquitetura e integração, e não como
+  requisito, evita que um recurso opcional concorra com as entregas planejadas.
+- Deixar a decisão sobre onde o PDF é gerado para o momento da implementação evita
+  fixar uma arquitetura antes de existir uma necessidade concreta.
+
+#### Ação
+
+- Nenhuma alteração de código nesta entrada; apenas o registro da ideia.
+- **Tecnologia candidata:** OpenPDF (LibrePDF).
+- **Prioridade:** futura, após a consolidação das funcionalidades atualmente
+  previstas para a API.
+- **A avaliar quando a ideia for retomada:** a licença da biblioteca, a
+  compatibilidade com o Quarkus (inclusive com compilação nativa, se vier a ser
+  relevante) e a relação com a paginação prevista para a Fase 2, já que relatórios
+  grandes dependem do controle do volume de dados.
