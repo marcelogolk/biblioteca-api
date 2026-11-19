@@ -305,8 +305,6 @@ class LivroControllerTest {
                 .statusCode(400);
     }
 
-
-
     @Test
     void buscarLivroByProprietarioId_deveRetornarLivros_quandoProprietarioComLivros() {
         criarLivro("Livro do Proprietario", "Autor X", "Categoria", 2020, proprietarioId);

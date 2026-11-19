@@ -1,9 +1,7 @@
 package br.dev.marcelocarvalho.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+import jakarta.ws.rs.QueryParam;
 import org.eclipse.microprofile.openapi.annotations.enums.SchemaType;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 
@@ -17,7 +15,11 @@ public record LivroAtualizacaoDTO(
         @NotBlank(message = "Autor é obrigatório")
         String autor,
 
-        @NotBlank(message = "Categoria é obrigatória")
+        @QueryParam("categoria")
+        @Pattern(
+                regexp = "(?s)(?=.*\\S).*",
+                message = "Categoria não pode ser vazia ou conter apenas espaços."
+        )
         String categoria,
 
         @Schema(type = SchemaType.INTEGER, example = "2026", description = "Ano de publicação do livro")

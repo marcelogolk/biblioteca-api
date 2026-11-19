@@ -20,8 +20,8 @@ public class LivroController {
     LivroService livroService;
 
     @GET
-    public Response listAllLivros(){
-        List<LivroDTO> livros = livroService.listAllLivros();
+    public Response listarLivros(@QueryParam("categoria") String categoria) {
+        List<LivroDTO> livros = livroService.listarLivros(categoria);
         return Response
                 .status(Response.Status.OK)
                 .entity(livros)
@@ -31,20 +31,21 @@ public class LivroController {
     @GET
     @Path("/{id}")
     public Response buscarLivroById(@PathParam("id") Long id){
+        LivroDTO livro = livroService.buscarLivroById(id);
         return Response
                 .status(Response.Status.OK)
-                .entity(livroService.buscarLivroById(id))
+                .entity(livro)
                 .build();
     }
 
-    @GET
-    @Path("/categoria/{categoria}")
-    public Response buscarLivroByCategoria(@PathParam("categoria") String  categoria){
-        return Response
-                .status(Response.Status.OK)
-                .entity(livroService.buscarLivroByCategoria(categoria))
-                .build();
-    }
+//    @GET
+//    @Path("/categoria/{categoria}")
+//    public Response buscarLivroByCategoria(@PathParam("categoria") String  categoria){
+//        return Response
+//                .status(Response.Status.OK)
+//                .entity(livroService.buscarLivroByCategoria(categoria))
+//                .build();
+//    }
 
     @GET
     @Path("/proprietario/{proprietariId}")

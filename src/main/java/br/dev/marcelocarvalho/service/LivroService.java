@@ -30,6 +30,18 @@ public class LivroService {
                 .toList();
     }
 
+    public List<LivroDTO> listarLivros(String categoria){
+        if (categoria == null) {
+            return livroRepository.listAll()
+                    .stream()
+                    .map(LivroDTO::new)
+                    .toList();
+        } return livroRepository.findByCategoria(categoria)
+                .stream()
+                .map(LivroDTO::new)
+                .toList();
+    }
+
     public LivroDTO buscarLivroById(Long id){
         Livro livro = livroRepository.findById(id);
         if (livro != null){

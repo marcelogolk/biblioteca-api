@@ -2,10 +2,8 @@ package br.dev.marcelocarvalho.entity;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
+import jakarta.ws.rs.QueryParam;
 
 import java.time.Year;
 import java.util.Objects;
@@ -27,7 +25,11 @@ public class Livro extends PanacheEntity {
     @Column(nullable = false)
     private String autor;
 
-    @NotBlank(message = "Categoria é obrigatória")
+    @QueryParam("categoria")
+    @Pattern(
+            regexp = "(?s)(?=.*\\S).*",
+            message = "Categoria não pode ser vazia ou conter apenas espaços."
+    )
     @Column(nullable = false)
     private String categoria;
 
